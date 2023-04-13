@@ -30,41 +30,33 @@ bool ParseObj(const string& fileName){
 	// Open the input 
 	myfile.open(fileName.c_str(), std::ios::in);
 
-	if (myfile.is_open())
-	{
+	if (myfile.is_open()){
 		string curLine;
 
-		while (getline(myfile, curLine))
-		{
+		while (getline(myfile, curLine)){
 			stringstream str(curLine);
 			GLfloat c1, c2, c3;
 			string tmp;
 
-			if (curLine.length() >= 2)
-			{
-				if (curLine[0] == 'v')
-				{
-					if (curLine[1] == 't') // texture
-					{
+			if (curLine.length() >= 2){
+				if (curLine[0] == 'v'){
+                    if (curLine[1] == 't'){ // texture
 						str >> tmp; // consume "vt"
 						str >> c1 >> c2;
 						gTextures.push_back(Texture(c1, c2));
 					}
-					else if (curLine[1] == 'n') // normal
-					{
+                    else if (curLine[1] == 'n'){ // normal
 						str >> tmp; // consume "vn"
 						str >> c1 >> c2 >> c3;
 						gNormals.push_back(Normal(c1, c2, c3));
 					}
-					else // vertex
-					{
+                    else{ // vertex
 						str >> tmp; // consume "v"
 						str >> c1 >> c2 >> c3;
 						gVertices.push_back(Vertex(c1, c2, c3));
 					}
 				}
-				else if (curLine[0] == 'f') // face
-				{
+                else if (curLine[0] == 'f'){ // face
 					str >> tmp; // consume "f"
 					char c;
 					int vIndex[3], nIndex[3], tIndex[3];
@@ -80,8 +72,7 @@ bool ParseObj(const string& fileName){
 						vIndex[2] == nIndex[2]); // a limitation for now
 
 					// make indices start from 0
-					for (int c = 0; c < 3; ++c)
-					{
+                    for (int c = 0; c < 3; ++c){
 						vIndex[c] -= 1;
 						nIndex[c] -= 1;
 						tIndex[c] -= 1;
@@ -89,23 +80,19 @@ bool ParseObj(const string& fileName){
 
 					gFaces.push_back(Face(vIndex, tIndex, nIndex));
 				}
-				else
-				{
+				else{
 					cout << "Ignoring unidentified line in obj file: " << curLine << endl;
 				}
 			}
-
 			//data += curLine;
-			if (!myfile.eof())
-			{
+			if (!myfile.eof()){
 				//data += "\n";
 			}
 		}
 
 		myfile.close();
 	}
-	else
-	{
+	else{
 		return false;
 	}
 
