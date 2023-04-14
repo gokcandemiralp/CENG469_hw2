@@ -1,19 +1,17 @@
 #include "main.h"
 
-GLuint gProgram[2];
+GLuint gProgram;
 int gWidth, gHeight;
 
-GLint modelingMatrixLoc[2];
-GLint viewingMatrixLoc[2];
-GLint projectionMatrixLoc[2];
-GLint eyePosLoc[2];
+GLint modelingMatrixLoc;
+GLint viewingMatrixLoc;
+GLint projectionMatrixLoc;
+GLint eyePosLoc;
 
 glm::mat4 projectionMatrix;
 glm::mat4 viewingMatrix;
 glm::mat4 modelingMatrix;
 glm::vec3 eyePos(0, 0, 0);
-
-int activeProgramIndex = 0;
 
 vector<Vertex> gVertices;
 vector<Texture> gTextures;
@@ -23,6 +21,8 @@ vector<Face> gFaces;
 GLuint gVertexAttribBuffer, gIndexBuffer;
 GLint gInVertexLoc, gInNormalLoc;
 int gVertexDataSizeInBytes, gNormalDataSizeInBytes;
+
+fastObjMesh* m;
 
 bool ParseObj(const string& fileName){
     fstream myfile;
@@ -212,54 +212,29 @@ GLuint createFS(const char* shaderName){
 }
 
 void initShaders(){
-    // Create the programs
 
-    gProgram[0] = glCreateProgram();
-    gProgram[1] = glCreateProgram();
-
-    // Create the shaders for both programs
+    gProgram = glCreateProgram();
 
     GLuint vs1 = createVS("vert.glsl");
     GLuint fs1 = createFS("frag.glsl");
 
-    GLuint vs2 = createVS("vert2.glsl");
-    GLuint fs2 = createFS("frag2.glsl");
+    glAttachShader(gProgram, vs1);
+    glAttachShader(gProgram, fs1);
 
-    // Attach the shaders to the programs
-
-    glAttachShader(gProgram[0], vs1);
-    glAttachShader(gProgram[0], fs1);
-
-    glAttachShader(gProgram[1], vs2);
-    glAttachShader(gProgram[1], fs2);
-
-    // Link the programs
-
-    glLinkProgram(gProgram[0]);
+    glLinkProgram(gProgram);
     GLint status;
-    glGetProgramiv(gProgram[0], GL_LINK_STATUS, &status);
+    glGetProgramiv(gProgram, GL_LINK_STATUS, &status);
 
     if (status != GL_TRUE){
         cout << "Program link failed" << endl;
         exit(-1);
     }
-
-    glLinkProgram(gProgram[1]);
-    glGetProgramiv(gProgram[1], GL_LINK_STATUS, &status);
-
-    if (status != GL_TRUE){
-        cout << "Program link failed" << endl;
-        exit(-1);
-    }
-
+    
     // Get the locations of the uniform variables from both programs
-
-    for (int i = 0; i < 2; ++i){
-        modelingMatrixLoc[i] = glGetUniformLocation(gProgram[i], "modelingMatrix");
-        viewingMatrixLoc[i] = glGetUniformLocation(gProgram[i], "viewingMatrix");
-        projectionMatrixLoc[i] = glGetUniformLocation(gProgram[i], "projectionMatrix");
-        eyePosLoc[i] = glGetUniformLocation(gProgram[i], "eyePos");
-    }
+    modelingMatrixLoc = glGetUniformLocation(gProgram, "modelingMatrix");
+    viewingMatrixLoc = glGetUniformLocation(gProgram, "viewingMatrix");
+    projectionMatrixLoc = glGetUniformLocation(gProgram, "projectionMatrix");
+    eyePosLoc = glGetUniformLocation(gProgram, "eyePos");
 }
 
 void initVBO(){
@@ -281,67 +256,40 @@ void initVBO(){
     glBindBuffer(GL_ARRAY_BUFFER, gVertexAttribBuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gIndexBuffer);
 
-    gVertexDataSizeInBytes = gVertices.size() * 3 * sizeof(GLfloat);
-    gNormalDataSizeInBytes = gNormals.size() * 3 * sizeof(GLfloat);
-    int indexDataSizeInBytes = gFaces.size() * 3 * sizeof(GLuint);
-    GLfloat* vertexData = new GLfloat[gVertices.size() * 3];
-    GLfloat* normalData = new GLfloat[gNormals.size() * 3];
+    gVertexDataSizeInBytes = m->position_count * 3 * sizeof(GLfloat);
+    gNormalDataSizeInBytes = m->normal_count * 3 * sizeof(GLfloat);
+    int indexDataSizeInBytes = m->face_count * 3 * sizeof(GLuint);
     GLuint* indexData = new GLuint[gFaces.size() * 3];
-
-    float minX = 1e6, maxX = -1e6;
-    float minY = 1e6, maxY = -1e6;
-    float minZ = 1e6, maxZ = -1e6;
-
-    for (int i = 0; i < gVertices.size(); ++i){
-        vertexData[3 * i] = gVertices[i].x;
-        vertexData[3 * i + 1] = gVertices[i].y;
-        vertexData[3 * i + 2] = gVertices[i].z;
-
-        minX = std::min(minX, gVertices[i].x);
-        maxX = std::max(maxX, gVertices[i].x);
-        minY = std::min(minY, gVertices[i].y);
-        maxY = std::max(maxY, gVertices[i].y);
-        minZ = std::min(minZ, gVertices[i].z);
-        maxZ = std::max(maxZ, gVertices[i].z);
-    }
-
-    std::cout << "minX = " << minX << std::endl;
-    std::cout << "maxX = " << maxX << std::endl;
-    std::cout << "minY = " << minY << std::endl;
-    std::cout << "maxY = " << maxY << std::endl;
-    std::cout << "minZ = " << minZ << std::endl;
-    std::cout << "maxZ = " << maxZ << std::endl;
-
-    for (int i = 0; i < gNormals.size(); ++i){
-        normalData[3 * i] = gNormals[i].x;
-        normalData[3 * i + 1] = gNormals[i].y;
-        normalData[3 * i + 2] = gNormals[i].z;
-    }
-
-    for (int i = 0; i < gFaces.size(); ++i){
-        indexData[3 * i] = gFaces[i].vIndex[0];
-        indexData[3 * i + 1] = gFaces[i].vIndex[1];
-        indexData[3 * i + 2] = gFaces[i].vIndex[2];
+    
+    for (int i = 0; i < m->face_count; ++i){
+        indexData[3 * i] = m->indices[3 * i].p;
+        indexData[3 * i + 1] = m->indices[3 * i + 1].p;
+        indexData[3 * i + 2] = m->indices[3 * i + 2].p;
     }
 
 
     glBufferData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes + gNormalDataSizeInBytes, 0, GL_STATIC_DRAW);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, gVertexDataSizeInBytes, vertexData);
-    glBufferSubData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes, gNormalDataSizeInBytes, normalData);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, gVertexDataSizeInBytes, m->positions);
+    glBufferSubData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes, gNormalDataSizeInBytes, m->normals);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSizeInBytes, indexData, GL_STATIC_DRAW);
 
     // done copying; can free now
-    delete[] vertexData;
-    delete[] normalData;
     delete[] indexData;
+    fast_obj_destroy(m);
 
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(gVertexDataSizeInBytes));
 }
 
 void init(){
-    ParseObj("armadillo.obj");
-    //ParseObj("bunny.obj");
+    m = fast_obj_read("bunny.obj");
+    cout << "m->normal_count: " << m->normal_count << "\n" ;
+    cout << "m->position_count: " << m->position_count << "\n" ;
+    cout << "m->face_count: " << m->face_count << "\n" ;
+    // tinyObj o;
+    // bool success = read_tiny_obj("bunny.obj", &o);
+    
+    ParseObj("bunny.obj");
 
     glEnable(GL_DEPTH_TEST);
     initShaders();
@@ -376,11 +324,11 @@ void display(){
     modelingMatrix = matT * matRz * matRy * matRx;
 
     // Set the active program and the values of its uniform variables
-    glUseProgram(gProgram[activeProgramIndex]);
-    glUniformMatrix4fv(projectionMatrixLoc[activeProgramIndex], 1, GL_FALSE, glm::value_ptr(projectionMatrix));
-    glUniformMatrix4fv(viewingMatrixLoc[activeProgramIndex], 1, GL_FALSE, glm::value_ptr(viewingMatrix));
-    glUniformMatrix4fv(modelingMatrixLoc[activeProgramIndex], 1, GL_FALSE, glm::value_ptr(modelingMatrix));
-    glUniform3fv(eyePosLoc[activeProgramIndex], 1, glm::value_ptr(eyePos));
+    glUseProgram(gProgram);
+    glUniformMatrix4fv(projectionMatrixLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+    glUniformMatrix4fv(viewingMatrixLoc, 1, GL_FALSE, glm::value_ptr(viewingMatrix));
+    glUniformMatrix4fv(modelingMatrixLoc, 1, GL_FALSE, glm::value_ptr(modelingMatrix));
+    glUniform3fv(eyePosLoc, 1, glm::value_ptr(eyePos));
 
     // Draw the scene
     drawModel();
@@ -407,14 +355,6 @@ void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
-    else if (key == GLFW_KEY_G && action == GLFW_PRESS){
-        //glShadeModel(GL_SMOOTH);
-        activeProgramIndex = 0;
-    }
-    else if (key == GLFW_KEY_P && action == GLFW_PRESS){
-        //glShadeModel(GL_SMOOTH);
-        activeProgramIndex = 1;
-    }
     else if (key == GLFW_KEY_F && action == GLFW_PRESS){
         //glShadeModel(GL_FLAT);
     }
@@ -429,6 +369,7 @@ void mainLoop(GLFWwindow* window){
 }
 
 int main(int argc, char** argv){
+    
     GLFWwindow* window;
     if (!glfwInit()){
         exit(-1);
@@ -440,7 +381,7 @@ int main(int argc, char** argv){
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
-    int width = 640, height = 480;
+    int width = 640, height = 640;
     window = glfwCreateWindow(width, height, "Simple Example", NULL, NULL);
 
     if (!window){

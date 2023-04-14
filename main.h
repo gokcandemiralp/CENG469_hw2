@@ -1,3 +1,6 @@
+#ifndef MAIN_H
+#define MAIN_H
+
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -13,12 +16,21 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+
+#define FAST_OBJ_IMPLEMENTATION
+#include "fast_obj.h"
+
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+
 //#include <glm/gtc/quaternion.hpp>
 //#include <glm/gtx/quaternion.hpp>
 
 using namespace std;
+using namespace tinyobj;
 
 #define BUFFER_OFFSET(i) ((char*)NULL + (i))
+#define CHECK(_c) check(_c, #_c)
 
 struct Vertex{
     Vertex(GLfloat inX, GLfloat inY, GLfloat inZ) : x(inX), y(inY), z(inZ) { }
@@ -49,3 +61,27 @@ struct Face{
     }
     GLuint vIndex[3], tIndex[3], nIndex[3];
 };
+
+struct tinyObj{
+    attrib_t                attrib;
+    std::vector<shape_t>    shapes;
+    std::vector<material_t> materials;
+};
+
+
+
+static
+bool read_tiny_obj(const char* path, tinyObj* o){
+    std::string err;
+    std::string warn;
+    return LoadObj(&o->attrib, &o->shapes, &o->materials, &warn, &err, path, 0, false);
+}
+
+
+static
+void check(bool c, const char* m){
+    if (!c)
+        printf("CHECK FAILED : %s\n", m);
+}
+
+#endif
