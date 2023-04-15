@@ -19,6 +19,13 @@ glm::vec3 eyeUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 glm::vec3 movementOffset(0.0f, 0.0f, -8.0f);
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+float eyeSpeed = 1.0f;
+
+float mouseLastX=gWidth/2;
+float mouseLastY=gHeight/2;
+const float sensitivity = 0.1f;
+float yaw = -90.0f;
+float pitch = 0.0f;
 
 GLuint gVertexAttribBuffer, gIndexBuffer;
 int gVertexDataSizeInBytes, gNormalDataSizeInBytes, indexDataSizeInBytes;
@@ -185,7 +192,7 @@ void display(){
     glClearStencil(0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-    // Compute the modeling matrix
+    viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
     glm::mat4 matT = glm::translate(glm::mat4(1.0), movementOffset);
     glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(0.8f ,0.8f ,0.8f));
     modelingMatrix = matS * matT;
@@ -201,7 +208,7 @@ void display(){
 }
 
 void movementKeys(GLFWwindow* window){
-    const float eyeSpeed = 5.0f * deltaTime;
+    eyeSpeed = 5.0f * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
         movementOffset -= eyeSpeed * eyeFront;
     }
@@ -220,6 +227,29 @@ void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
+}
+
+void mouse(GLFWwindow* window, double xpos, double ypos){
+    float xoffset = xpos - mouseLastX;
+    float yoffset = mouseLastY - ypos; // reversed since y-coordinates range from bottom to top
+    mouseLastX = xpos;
+    mouseLastY = ypos;
+
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+    yaw   += xoffset;
+    pitch += yoffset;
+    
+    if(pitch > 89.0f)
+        pitch = 89.0f;
+    if(pitch < -89.0f)
+        pitch = -89.0f;
+
+    glm::vec3 direction;
+    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    direction.y = sin(glm::radians(pitch));
+    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    eyeFront = glm::normalize(direction);
 }
 
 void mainLoop(GLFWwindow* window){
@@ -267,8 +297,11 @@ int main(int argc, char** argv){
     glfwSetWindowTitle(window, rendererInfo);
 
     init();
-
+    
+    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetKeyCallback(window, keyboard);
+    glfwSetCursorPosCallback(window, mouse);
+    
     mainLoop(window); // this does not return unless the window is closed
 
     glfwDestroyWindow(window);
