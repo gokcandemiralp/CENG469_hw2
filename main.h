@@ -31,6 +31,7 @@ using namespace tinyobj;
 
 #define BUFFER_OFFSET(i) ((char*)NULL + (i))
 #define CHECK(_c) check(_c, #_c)
+#define VERTEX_PER_FACE 4
 
 struct Vertex{
     Vertex(GLfloat inX, GLfloat inY, GLfloat inZ) : x(inX), y(inY), z(inZ) { }

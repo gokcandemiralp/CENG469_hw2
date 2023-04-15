@@ -1,7 +1,7 @@
 #include "main.h"
 
 GLuint gProgram;
-int gWidth, gHeight;
+int gWidth = 800, gHeight = 450;
 
 GLint modelingMatrixLoc;
 GLint viewingMatrixLoc;
@@ -158,13 +158,19 @@ void initVBO(){
 
     // done copying; can free now
     delete[] indexData;
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(gVertexDataSizeInBytes));
+    fast_obj_destroy(m);
 }
 
+void initWindowShape(){
+    glViewport(0, 0, gWidth, gHeight);
+    float fovyRad = (float)(45.0 / 180.0) * M_PI;
+    projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
+}
+
+
 void init(){
-    m = fast_obj_read("bunny.obj");
+    m = fast_obj_read("armadillo.obj");
+    // m = fast_obj_read("cat.obj");
     cout << "m->normal_count: " << m->normal_count << "\n" ;
     cout << "m->position_count: " << m->position_count << "\n" ;
     cout << "m->face_count: " << m->face_count << "\n" ;
@@ -172,6 +178,7 @@ void init(){
     glEnable(GL_DEPTH_TEST);
     initShaders();
     initVBO();
+    initWindowShape();
 }
 
 void drawModel(){
@@ -181,7 +188,7 @@ void drawModel(){
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(gVertexDataSizeInBytes));
 
-    glDrawElements(GL_TRIANGLES, faceEntries, GL_UNSIGNED_INT, 0);
+    glDrawElements(GL_TRIANGLES, faceEntries , GL_UNSIGNED_INT, 0);
 }
 
 void display(){
@@ -191,6 +198,7 @@ void display(){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     // Compute the modeling matrix
+    viewingMatrix = viewingMatrix = glm::lookAt(eyePos,glm::vec3(0,0,0),glm::vec3(0,1,0));
     glm::mat4 matT = glm::translate(glm::mat4(1.0), glm::vec3(0.0f, 0.0f, 0.0f));
     glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(0.2f ,0.2f ,0.2f));
     modelingMatrix = matS * matT;
@@ -206,27 +214,15 @@ void display(){
     drawModel();
 }
 
-void reshape(GLFWwindow* window, int w, int h){
-    w = w < 1 ? 1 : w;
-    h = h < 1 ? 1 : h;
-
-    gWidth = w;
-    gHeight = h;
-
-    glViewport(0, 0, w, h);
-
-    float fovyRad = (float)(45.0 / 180.0) * M_PI;
-    projectionMatrix = glm::perspective(fovyRad, w/(float) h, 1.0f, 100.0f);
-
-    viewingMatrix = viewingMatrix = glm::lookAt(eyePos,glm::vec3(0,0,0),glm::vec3(0,1,0));
-}
-
 void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
-    else if (key == GLFW_KEY_F && action == GLFW_PRESS){
-        //glShadeModel(GL_FLAT);
+    else if (key == GLFW_KEY_W){
+        eyePos.z -= 0.05;
+    }
+    else if (key == GLFW_KEY_S){
+        eyePos.z += 0.05;
     }
 }
 
@@ -250,9 +246,8 @@ int main(int argc, char** argv){
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-
-    int width = 640, height = 640;
-    window = glfwCreateWindow(width, height, "Simple Example", NULL, NULL);
+    
+    window = glfwCreateWindow(gWidth, gHeight, "Simple Example", NULL, NULL);
 
     if (!window){
         glfwTerminate();
@@ -277,9 +272,6 @@ int main(int argc, char** argv){
     init();
 
     glfwSetKeyCallback(window, keyboard);
-    glfwSetWindowSizeCallback(window, reshape);
-
-    reshape(window, width, height); // need to call this once ourselves
     mainLoop(window); // this does not return unless the window is closed
 
     glfwDestroyWindow(window);
