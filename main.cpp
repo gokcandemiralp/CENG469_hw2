@@ -11,38 +11,20 @@ GLint eyePosLoc;
 glm::mat4 projectionMatrix;
 glm::mat4 viewingMatrix;
 glm::mat4 modelingMatrix;
-glm::vec3 eyePos(0, 0, 2);
+
+glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  3.0f);
+glm::vec3 eyeFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 eyeUp    = glm::vec3(0.0f, 1.0f,  0.0f);
+
+glm::vec3 movementOffset(0.0f, 0.0f, -8.0f);
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
 
 GLuint gVertexAttribBuffer, gIndexBuffer;
 int gVertexDataSizeInBytes, gNormalDataSizeInBytes, indexDataSizeInBytes;
 int vertexEntries, normalEntries, faceEntries;
 
 fastObjMesh* m;
-
-bool ReadDataFromFile(
-    const string& fileName, ///< [in]  Name of the shader file
-          string& data){     ///< [out] The contents of the file
-    fstream myfile;
-
-    myfile.open(fileName.c_str(), std::ios::in); // Open the input
-
-    if (myfile.is_open()){
-        string curLine;
-
-        while (getline(myfile, curLine)){
-            data += curLine;
-            if (!myfile.eof()){
-                data += "\n";
-            }
-        }
-
-        myfile.close();
-    }
-    else{
-        return false;
-    }
-    return true;
-}
 
 GLuint createVS(const char* shaderName){
     string shaderSource;
@@ -165,6 +147,11 @@ void initWindowShape(){
     glViewport(0, 0, gWidth, gHeight);
     float fovyRad = (float)(45.0 / 180.0) * M_PI;
     projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
+    viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
+    
+    glUseProgram(gProgram);
+    glUniformMatrix4fv(projectionMatrixLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+    glUniformMatrix4fv(viewingMatrixLoc, 1, GL_FALSE, glm::value_ptr(viewingMatrix));
 }
 
 
@@ -182,9 +169,6 @@ void init(){
 }
 
 void drawModel(){
-    glBindBuffer(GL_ARRAY_BUFFER, gVertexAttribBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gIndexBuffer);
-
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(gVertexDataSizeInBytes));
 
@@ -192,20 +176,22 @@ void drawModel(){
 }
 
 void display(){
+    float currentFrame = glfwGetTime();
+    deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;
+    
     glClearColor(0, 0, 0, 1);
     glClearDepth(1.0f);
     glClearStencil(0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     // Compute the modeling matrix
-    viewingMatrix = viewingMatrix = glm::lookAt(eyePos,glm::vec3(0,0,0),glm::vec3(0,1,0));
-    glm::mat4 matT = glm::translate(glm::mat4(1.0), glm::vec3(0.0f, 0.0f, 0.0f));
-    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(0.2f ,0.2f ,0.2f));
+    glm::mat4 matT = glm::translate(glm::mat4(1.0), movementOffset);
+    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(0.8f ,0.8f ,0.8f));
     modelingMatrix = matS * matT;
 
     // Set the active program and the values of its uniform variables
     glUseProgram(gProgram);
-    glUniformMatrix4fv(projectionMatrixLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
     glUniformMatrix4fv(viewingMatrixLoc, 1, GL_FALSE, glm::value_ptr(viewingMatrix));
     glUniformMatrix4fv(modelingMatrixLoc, 1, GL_FALSE, glm::value_ptr(modelingMatrix));
     glUniform3fv(eyePosLoc, 1, glm::value_ptr(eyePos));
@@ -214,20 +200,31 @@ void display(){
     drawModel();
 }
 
+void movementKeys(GLFWwindow* window){
+    const float eyeSpeed = 5.0f * deltaTime;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
+        movementOffset -= eyeSpeed * eyeFront;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
+        movementOffset += eyeSpeed * eyeFront;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
+        movementOffset += glm::normalize(glm::cross(eyeFront, eyeUp)) * eyeSpeed;
+    }
+    else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
+        movementOffset -= glm::normalize(glm::cross(eyeFront, eyeUp)) * eyeSpeed;
+    }
+}
+
 void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(window, GLFW_TRUE);
-    }
-    else if (key == GLFW_KEY_W){
-        eyePos.z -= 0.05;
-    }
-    else if (key == GLFW_KEY_S){
-        eyePos.z += 0.05;
     }
 }
 
 void mainLoop(GLFWwindow* window){
     while (!glfwWindowShouldClose(window)){
+        movementKeys(window);
         display();
         glfwSwapBuffers(window);
         glfwPollEvents();

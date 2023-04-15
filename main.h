@@ -69,8 +69,6 @@ struct tinyObj{
     std::vector<material_t> materials;
 };
 
-
-
 static
 bool read_tiny_obj(const char* path, tinyObj* o){
     std::string err;
@@ -78,11 +76,30 @@ bool read_tiny_obj(const char* path, tinyObj* o){
     return LoadObj(&o->attrib, &o->shapes, &o->materials, &warn, &err, path, 0, false);
 }
 
+bool ReadDataFromFile(
+    const string& fileName, ///< [in]  Name of the shader file
+          string& data){     ///< [out] The contents of the file
+    fstream myfile;
 
-static
-void check(bool c, const char* m){
-    if (!c)
-        printf("CHECK FAILED : %s\n", m);
+    myfile.open(fileName.c_str(), std::ios::in); // Open the input
+
+    if (myfile.is_open()){
+        string curLine;
+
+        while (getline(myfile, curLine)){
+            data += curLine;
+            if (!myfile.eof()){
+                data += "\n";
+            }
+        }
+
+        myfile.close();
+    }
+    else{
+        return false;
+    }
+    return true;
 }
+
 
 #endif
