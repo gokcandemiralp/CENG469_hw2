@@ -28,8 +28,8 @@ float yaw = -90.0f;
 float pitch = 0.0f;
 
 GLuint gVertexAttribBuffer, gIndexBuffer;
-int gVertexDataSizeInBytes, gNormalDataSizeInBytes, indexDataSizeInBytes;
-int vertexEntries, normalEntries, faceEntries;
+int gVertexDataSizeInBytes, gNormalDataSizeInBytes, indexDataSizeInBytes, gTexCoordDataSizeInBytes;
+int vertexEntries, normalEntries, faceEntries, texCoordEntries;
 
 fastObjMesh* m;
 
@@ -105,31 +105,55 @@ void initShaders(){
     eyePosLoc = glGetUniformLocation(gProgram, "eyePos");
 }
 
+void initTexture(){
+    unsigned int texture;
+    glGenTextures(1, &texture);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    // set the texture wrapping/filtering options (on the currently bound texture object)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // load and generate the texture
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load("objects/car.png", &width, &height, &nrChannels, 0);
+    if (data){
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else{
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    stbi_image_free(data);
+}
+
 void initVBO(){
     GLuint vao;
     glGenVertexArrays(1, &vao);
     assert(vao > 0);
     glBindVertexArray(vao);
-    cout << "vao = " << vao << endl;
 
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
     assert(glGetError() == GL_NONE);
 
     glGenBuffers(1, &gVertexAttribBuffer);
     glGenBuffers(1, &gIndexBuffer);
 
     assert(gVertexAttribBuffer > 0 && gIndexBuffer > 0);
-
+    
     glBindBuffer(GL_ARRAY_BUFFER, gVertexAttribBuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gIndexBuffer);
 
     vertexEntries = m->position_count * 3;
     normalEntries = m->normal_count * 3;
+    texCoordEntries = m->texcoord_count * 2;
     faceEntries = m->face_count * 3;
     
     gVertexDataSizeInBytes = vertexEntries * sizeof(GLfloat);
     gNormalDataSizeInBytes = normalEntries * sizeof(GLfloat);
+    gTexCoordDataSizeInBytes = texCoordEntries * sizeof(GLfloat);
     indexDataSizeInBytes = faceEntries * sizeof(GLuint);
     GLuint* indexData = new GLuint[faceEntries];
     
@@ -143,7 +167,14 @@ void initVBO(){
     glBufferData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes + gNormalDataSizeInBytes, 0, GL_STATIC_DRAW);
     glBufferSubData(GL_ARRAY_BUFFER, 0, gVertexDataSizeInBytes, m->positions);
     glBufferSubData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes, gNormalDataSizeInBytes, m->normals);
+    
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSizeInBytes, indexData, GL_STATIC_DRAW);
+    
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    float borderColor[] = { 1.0f, 1.0f, 0.0f, 1.0f };
+    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
+
+
 
     // done copying; can free now
     delete[] indexData;
@@ -163,14 +194,16 @@ void initWindowShape(){
 
 
 void init(){
-    m = fast_obj_read("armadillo.obj");
+    m = fast_obj_read("objects/car.obj");
     // m = fast_obj_read("cat.obj");
     cout << "m->normal_count: " << m->normal_count << "\n" ;
     cout << "m->position_count: " << m->position_count << "\n" ;
     cout << "m->face_count: " << m->face_count << "\n" ;
+    cout << "m->texcoord_count: " << m->texcoord_count << "\n" ;
 
     glEnable(GL_DEPTH_TEST);
     initShaders();
+    initTexture();
     initVBO();
     initWindowShape();
 }
@@ -178,6 +211,7 @@ void init(){
 void drawModel(){
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(gVertexDataSizeInBytes));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(gVertexDataSizeInBytes + gTexCoordDataSizeInBytes));
 
     glDrawElements(GL_TRIANGLES, faceEntries , GL_UNSIGNED_INT, 0);
 }
@@ -195,7 +229,7 @@ void display(){
     viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
     glm::mat4 matT = glm::translate(glm::mat4(1.0), movementOffset);
     glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(0.8f ,0.8f ,0.8f));
-    modelingMatrix = matS * matT;
+    modelingMatrix = matT * matS ;
 
     // Set the active program and the values of its uniform variables
     glUseProgram(gProgram);
@@ -226,6 +260,12 @@ void movementKeys(GLFWwindow* window){
 void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(window, GLFW_TRUE);
+    }
+    else if(key == GLFW_KEY_L && action == GLFW_PRESS){
+        glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+    }
+    else if(key == GLFW_KEY_O && action == GLFW_PRESS){
+        glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
     }
 }
 
