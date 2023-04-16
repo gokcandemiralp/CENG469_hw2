@@ -117,7 +117,7 @@ void initTexture(){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load and generate the texture
     int width, height, nrChannels;
-    unsigned char *data = stbi_load("objects/car.png", &width, &height, &nrChannels, 0);
+    unsigned char *data = stbi_load("objects/rainbow.png", &width, &height, &nrChannels, 0);
     if (data){
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
@@ -154,7 +154,7 @@ void initVBO(){
     vertexEntries = m->position_count * 3;
     normalEntries = m->normal_count * 3;
     texCoordEntries = m->texcoord_count * 2;
-    faceEntries = m->face_count * 3;
+    faceEntries = m->face_count * 6;
     
     gVertexDataSizeInBytes = vertexEntries * sizeof(GLfloat);
     gNormalDataSizeInBytes = normalEntries * sizeof(GLfloat);
@@ -163,9 +163,13 @@ void initVBO(){
     GLuint* indexData = new GLuint[faceEntries];
     
     for (int i = 0; i < m->face_count; ++i){
-        indexData[3 * i] = m->indices[3 * i].p;
-        indexData[3 * i + 1] = m->indices[3 * i + 1].p;
-        indexData[3 * i + 2] = m->indices[3 * i + 2].p;
+        indexData[6 * i] = m->indices[4 * i].p;
+        indexData[6 * i + 1] = m->indices[4 * i + 1].p;
+        indexData[6 * i + 2] = m->indices[4 * i + 2].p;
+        
+        indexData[6 * i + 3] = m->indices[4 * i].p;
+        indexData[6 * i + 4] = m->indices[4 * i + 2].p;
+        indexData[6 * i + 5] = m->indices[4 * i + 3].p;
     }
 
 
@@ -199,7 +203,7 @@ void initWindowShape(){
 
 
 void init(){
-    m = fast_obj_read("objects/car.obj");
+    m = fast_obj_read("objects/bicycle.obj");
     // m = fast_obj_read("cat.obj");
     cout << "m->normal_count: " << m->normal_count << "\n" ;
     cout << "m->position_count: " << m->position_count << "\n" ;
