@@ -117,7 +117,7 @@ void initTexture(){
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     // load and generate the texture
     int width, height, nrChannels;
-    unsigned char *data = stbi_load("objects/rainbow.png", &width, &height, &nrChannels, 0);
+    unsigned char *data = stbi_load("objects/bicycle.jpg", &width, &height, &nrChannels, 0);
     if (data){
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
@@ -137,6 +137,16 @@ void writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
     normalData[3 * vertexIndex + 1] = m->normals[3 * normalIndex + 1];
     normalData[3 * vertexIndex + 2] = m->normals[3 * normalIndex + 2];
 }
+
+void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
+    texCoordData[2 * vertexIndex] = m->texcoords[2 * texCoordIndex];
+    texCoordData[2 * vertexIndex + 1] = m->texcoords[2 * texCoordIndex + 1];
+}
+
+//void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
+//    texCoordData[2 * vertexIndex] = 1.0f;
+//    texCoordData[2 * vertexIndex + 1] = 1.0f;
+//}
 
 void initVBO(){
     GLuint vao;
@@ -158,20 +168,18 @@ void initVBO(){
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gIndexBuffer);
 
     vertexEntries = m->position_count * 3;
-    normalEntries = m->normal_count * 3;
-    texCoordEntries = m->texcoord_count * 2;
+    texCoordEntries = m->position_count * 2;
     faceEntries = m->face_count * 6;
     
     gVertexDataSizeInBytes = vertexEntries * sizeof(GLfloat);
-    gNormalDataSizeInBytes = normalEntries * sizeof(GLfloat);
+    gNormalDataSizeInBytes = vertexEntries * sizeof(GLfloat);
     gTexCoordDataSizeInBytes = texCoordEntries * sizeof(GLfloat);
     indexDataSizeInBytes = faceEntries * sizeof(GLuint);
-    GLfloat* normalData = new GLfloat[normalEntries];
+    GLfloat* normalData = new GLfloat[vertexEntries];
+    GLfloat* texCoordData = new GLfloat[texCoordEntries];
     GLuint* indexData = new GLuint[faceEntries];
     
     for (int i = 0; i < m->face_count; ++i){
-        if(m->indices[4 * i].p == 1){cout << m->normals[3] << "\n";}
-        
         indexData[6 * i] = m->indices[4 * i].p;
         indexData[6 * i + 1] = m->indices[4 * i + 1].p;
         indexData[6 * i + 2] = m->indices[4 * i + 2].p;
@@ -184,23 +192,27 @@ void initVBO(){
         writeVertexNormal(normalData, m->indices[4 * i + 1].p, m->indices[4 * i + 1].n);
         writeVertexNormal(normalData, m->indices[4 * i + 2].p, m->indices[4 * i + 2].n);
         writeVertexNormal(normalData, m->indices[4 * i + 3].p, m->indices[4 * i + 3].n);
+        
+        writeVertexTexCoord(texCoordData, m->indices[4 * i    ].p, m->indices[4 * i    ].t);
+        writeVertexTexCoord(texCoordData, m->indices[4 * i + 1].p, m->indices[4 * i + 1].t);
+        writeVertexTexCoord(texCoordData, m->indices[4 * i + 2].p, m->indices[4 * i + 2].t);
+        writeVertexTexCoord(texCoordData, m->indices[4 * i + 3].p, m->indices[4 * i + 3].t);
+        if(i == 1){cout << m->indices[4 * i    ].t  << "\n";}
     }
 
 
-    glBufferData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes + gNormalDataSizeInBytes, 0, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes + gNormalDataSizeInBytes + gTexCoordDataSizeInBytes, 0, GL_STATIC_DRAW);
+    
     glBufferSubData(GL_ARRAY_BUFFER, 0, gVertexDataSizeInBytes, m->positions);
     glBufferSubData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes, gNormalDataSizeInBytes, normalData);
+    glBufferSubData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes + gNormalDataSizeInBytes, gTexCoordDataSizeInBytes, texCoordData);
+    // texCoordData
     
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSizeInBytes, indexData, GL_STATIC_DRAW);
-    
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    float borderColor[] = { 1.0f, 1.0f, 0.0f, 1.0f };
-    glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, borderColor);
-
-
 
     // done copying; can free now
     delete[] indexData;
+    delete[] normalData;
     fast_obj_destroy(m);
 }
 
@@ -234,7 +246,7 @@ void init(){
 void drawModel(){
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(gVertexDataSizeInBytes));
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(gVertexDataSizeInBytes + gTexCoordDataSizeInBytes));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(gVertexDataSizeInBytes + gNormalDataSizeInBytes));
 
     glDrawElements(GL_TRIANGLES, faceEntries , GL_UNSIGNED_INT, 0);
 }
