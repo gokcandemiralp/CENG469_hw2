@@ -132,6 +132,12 @@ void initTexture(){
     stbi_image_free(data);
 }
 
+void writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
+    normalData[3 * vertexIndex] = m->normals[3 * normalIndex];
+    normalData[3 * vertexIndex + 1] = m->normals[3 * normalIndex + 1];
+    normalData[3 * vertexIndex + 2] = m->normals[3 * normalIndex + 2];
+}
+
 void initVBO(){
     GLuint vao;
     glGenVertexArrays(1, &vao);
@@ -160,9 +166,12 @@ void initVBO(){
     gNormalDataSizeInBytes = normalEntries * sizeof(GLfloat);
     gTexCoordDataSizeInBytes = texCoordEntries * sizeof(GLfloat);
     indexDataSizeInBytes = faceEntries * sizeof(GLuint);
+    GLfloat* normalData = new GLfloat[normalEntries];
     GLuint* indexData = new GLuint[faceEntries];
     
     for (int i = 0; i < m->face_count; ++i){
+        if(m->indices[4 * i].p == 1){cout << m->normals[3] << "\n";}
+        
         indexData[6 * i] = m->indices[4 * i].p;
         indexData[6 * i + 1] = m->indices[4 * i + 1].p;
         indexData[6 * i + 2] = m->indices[4 * i + 2].p;
@@ -170,12 +179,17 @@ void initVBO(){
         indexData[6 * i + 3] = m->indices[4 * i].p;
         indexData[6 * i + 4] = m->indices[4 * i + 2].p;
         indexData[6 * i + 5] = m->indices[4 * i + 3].p;
+        
+        writeVertexNormal(normalData, m->indices[4 * i    ].p, m->indices[4 * i    ].n);
+        writeVertexNormal(normalData, m->indices[4 * i + 1].p, m->indices[4 * i + 1].n);
+        writeVertexNormal(normalData, m->indices[4 * i + 2].p, m->indices[4 * i + 2].n);
+        writeVertexNormal(normalData, m->indices[4 * i + 3].p, m->indices[4 * i + 3].n);
     }
 
 
     glBufferData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes + gNormalDataSizeInBytes, 0, GL_STATIC_DRAW);
     glBufferSubData(GL_ARRAY_BUFFER, 0, gVertexDataSizeInBytes, m->positions);
-    glBufferSubData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes, gNormalDataSizeInBytes, m->normals);
+    glBufferSubData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes, gNormalDataSizeInBytes, normalData);
     
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSizeInBytes, indexData, GL_STATIC_DRAW);
     
@@ -236,9 +250,10 @@ void display(){
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
     viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
+    glm::mat4 matR = glm::rotate(glm::mat4(1.f), glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(0.02f ,0.02f ,0.02f));
     glm::mat4 matT = glm::translate(glm::mat4(1.0), movementOffset);
-    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(0.8f ,0.8f ,0.8f));
-    modelingMatrix = matT * matS ;
+    modelingMatrix = matT * matS * matR;
 
     // Set the active program and the values of its uniform variables
     glUseProgram(gProgram);
