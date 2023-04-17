@@ -140,7 +140,7 @@ void writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
 
 void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
     texCoordData[2 * vertexIndex] = m->texcoords[2 * texCoordIndex];
-    texCoordData[2 * vertexIndex + 1] = m->texcoords[2 * texCoordIndex + 1];
+    texCoordData[2 * vertexIndex + 1] = 1.0f - m->texcoords[2 * texCoordIndex + 1];
 }
 
 //void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
