@@ -129,8 +129,6 @@ void initVBO(){
     gNormalDataSizeInBytes = vertexEntries * sizeof(GLfloat);
     gTexCoordDataSizeInBytes = texCoordEntries * sizeof(GLfloat);
     indexDataSizeInBytes = faceEntries * sizeof(GLuint);
-    GLfloat* normalData = new GLfloat[vertexEntries];
-    GLfloat* texCoordData = new GLfloat[texCoordEntries];
     GLuint* indexData = new GLuint[faceEntries];
     
     for (int i = 0; i < m->face_count; ++i){
@@ -154,14 +152,13 @@ void initVBO(){
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     // All the faces of the cubemap (make sure they are in this exact order)
-    std::string facesCubemap[6] =
-    {
-        "objects/left.png",
-        "objects/front.png",
+    std::string facesCubemap[6]={
         "objects/right.png",
-        "objects/back.png",
+        "objects/left.png",
+        "objects/top.png",
         "objects/bottom.png",
-        "objects/top.png"
+        "objects/front.png",
+        "objects/back.png"
     };
 
     // Creates the cubemap texture object
@@ -184,8 +181,7 @@ void initVBO(){
         if (data)
         {
             stbi_set_flip_vertically_on_load(false);
-            glTexImage2D
-            (
+            glTexImage2D(
                 GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
                 0,
                 GL_RGB,
@@ -207,8 +203,6 @@ void initVBO(){
 
     // done copying; can free now
     delete[] indexData;
-    delete[] normalData;
-    delete[] texCoordData;
     fast_obj_destroy(m);
 }
 
@@ -244,10 +238,8 @@ void init(){
 void renderSkyBox(){
     glDepthFunc(GL_LEQUAL);
     
-    glm::mat4 matR = glm::rotate(glm::mat4(1.f), glm::radians(-90.0f), glm::vec3(1, 0, 0));
     glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(8.0f ,8.0f ,9.0f));
-    glm::mat4 matT = glm::translate(glm::mat4(1.0), movementOffset);
-    modelingMatrix = matT * matS * matR;
+    modelingMatrix = matS;
     
     glUseProgram(gCharacterProgram);
     glUniform1i(glGetUniformLocation(gCharacterProgram, "skybox"), 0);
@@ -266,7 +258,10 @@ void renderSkyBox(){
 }
 
 void renderCharacter(){
-    ;
+    glm::mat4 matR = glm::rotate(glm::mat4(1.f), glm::radians(-90.0f), glm::vec3(1, 0, 0));
+    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(8.0f ,8.0f ,9.0f));
+    glm::mat4 matT = glm::translate(glm::mat4(1.0), movementOffset);
+    modelingMatrix = matT * matS * matR;
 }
 
 void display(){
