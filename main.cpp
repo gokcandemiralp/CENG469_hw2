@@ -1,6 +1,10 @@
 #include "main.h"
 
-GLuint gProgram;
+GLuint gCharacterProgram;
+GLuint gSkyBoxProgram;
+unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
+unsigned int cubemapTexture;
+
 int gWidth = 800, gHeight = 450;
 
 GLint modelingMatrixLoc;
@@ -12,11 +16,11 @@ glm::mat4 projectionMatrix;
 glm::mat4 viewingMatrix;
 glm::mat4 modelingMatrix;
 
-glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  3.0f);
+glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);
 glm::vec3 eyeFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 eyeUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 
-glm::vec3 movementOffset(0.0f, 0.0f, -8.0f);
+glm::vec3 movementOffset(0.0f, 0.0f, 0.0f);
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 float eyeSpeed = 1.0f;
@@ -26,6 +30,7 @@ float mouseLastY=gHeight/2;
 const float sensitivity = 0.1f;
 float yaw = -90.0f;
 float pitch = 0.0f;
+
 
 GLuint gVertexAttribBuffer, gIndexBuffer;
 int gVertexDataSizeInBytes, gNormalDataSizeInBytes, indexDataSizeInBytes, gTexCoordDataSizeInBytes;
@@ -81,17 +86,16 @@ GLuint createFS(const char* shaderName){
 
 void initShaders(){
 
-    gProgram = glCreateProgram();
+    gCharacterProgram = glCreateProgram();
+    GLuint vs1 = createVS("shaders/vertSkybox.glsl");
+    GLuint fs1 = createFS("shaders/fragSkybox.glsl");
 
-    GLuint vs1 = createVS("vert.glsl");
-    GLuint fs1 = createFS("frag.glsl");
+    glAttachShader(gCharacterProgram, vs1);
+    glAttachShader(gCharacterProgram, fs1);
 
-    glAttachShader(gProgram, vs1);
-    glAttachShader(gProgram, fs1);
-
-    glLinkProgram(gProgram);
+    glLinkProgram(gCharacterProgram);
     GLint status;
-    glGetProgramiv(gProgram, GL_LINK_STATUS, &status);
+    glGetProgramiv(gCharacterProgram, GL_LINK_STATUS, &status);
 
     if (status != GL_TRUE){
         cout << "Program link failed" << endl;
@@ -99,37 +103,10 @@ void initShaders(){
     }
     
     // Get the locations of the uniform variables from both programs
-    modelingMatrixLoc = glGetUniformLocation(gProgram, "modelingMatrix");
-    viewingMatrixLoc = glGetUniformLocation(gProgram, "viewingMatrix");
-    projectionMatrixLoc = glGetUniformLocation(gProgram, "projectionMatrix");
-    eyePosLoc = glGetUniformLocation(gProgram, "eyePos");
-}
-
-void initTexture(){
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    
-    // set the texture wrapping/filtering options (on the currently bound texture object)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load and generate the texture
-    int width, height, nrChannels;
-    unsigned char *data = stbi_load("objects/bicycle.jpg", &width, &height, &nrChannels, 0);
-    if (data){
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else{
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    
-    glUseProgram(gProgram);
-    glUniform1i(glGetUniformLocation(gProgram, "ourTexture"), 0); // set it manually
-    
-    stbi_image_free(data);
+    modelingMatrixLoc = glGetUniformLocation(gCharacterProgram, "modelingMatrix");
+    viewingMatrixLoc = glGetUniformLocation(gCharacterProgram, "viewingMatrix");
+    projectionMatrixLoc = glGetUniformLocation(gCharacterProgram, "projectionMatrix");
+    eyePosLoc = glGetUniformLocation(gCharacterProgram, "eyePos");
 }
 
 void writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
@@ -143,33 +120,10 @@ void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordInd
     texCoordData[2 * vertexIndex + 1] = 1.0f - m->texcoords[2 * texCoordIndex + 1];
 }
 
-//void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
-//    texCoordData[2 * vertexIndex] = 1.0f;
-//    texCoordData[2 * vertexIndex + 1] = 1.0f;
-//}
-
 void initVBO(){
-    GLuint vao;
-    glGenVertexArrays(1, &vao);
-    assert(vao > 0);
-    glBindVertexArray(vao);
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
-    assert(glGetError() == GL_NONE);
-
-    glGenBuffers(1, &gVertexAttribBuffer);
-    glGenBuffers(1, &gIndexBuffer);
-
-    assert(gVertexAttribBuffer > 0 && gIndexBuffer > 0);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, gVertexAttribBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, gIndexBuffer);
-
     vertexEntries = m->position_count * 3;
     texCoordEntries = m->position_count * 2;
-    faceEntries = m->face_count * 6;
+    faceEntries = m->face_count * 3;
     
     gVertexDataSizeInBytes = vertexEntries * sizeof(GLfloat);
     gNormalDataSizeInBytes = vertexEntries * sizeof(GLfloat);
@@ -180,39 +134,81 @@ void initVBO(){
     GLuint* indexData = new GLuint[faceEntries];
     
     for (int i = 0; i < m->face_count; ++i){
-        indexData[6 * i] = m->indices[4 * i].p;
-        indexData[6 * i + 1] = m->indices[4 * i + 1].p;
-        indexData[6 * i + 2] = m->indices[4 * i + 2].p;
-        
-        indexData[6 * i + 3] = m->indices[4 * i].p;
-        indexData[6 * i + 4] = m->indices[4 * i + 2].p;
-        indexData[6 * i + 5] = m->indices[4 * i + 3].p;
-        
-        writeVertexNormal(normalData, m->indices[4 * i    ].p, m->indices[4 * i    ].n);
-        writeVertexNormal(normalData, m->indices[4 * i + 1].p, m->indices[4 * i + 1].n);
-        writeVertexNormal(normalData, m->indices[4 * i + 2].p, m->indices[4 * i + 2].n);
-        writeVertexNormal(normalData, m->indices[4 * i + 3].p, m->indices[4 * i + 3].n);
-        
-        writeVertexTexCoord(texCoordData, m->indices[4 * i    ].p, m->indices[4 * i    ].t);
-        writeVertexTexCoord(texCoordData, m->indices[4 * i + 1].p, m->indices[4 * i + 1].t);
-        writeVertexTexCoord(texCoordData, m->indices[4 * i + 2].p, m->indices[4 * i + 2].t);
-        writeVertexTexCoord(texCoordData, m->indices[4 * i + 3].p, m->indices[4 * i + 3].t);
-        if(i == 1){cout << m->indices[4 * i    ].t  << "\n";}
+        indexData[3 * i] = m->indices[3 * i].p;
+        indexData[3 * i + 1] = m->indices[3 * i + 1].p;
+        indexData[3 * i + 2] = m->indices[3 * i + 2].p;
     }
 
-
-    glBufferData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes + gNormalDataSizeInBytes + gTexCoordDataSizeInBytes, 0, GL_STATIC_DRAW);
-    
-    glBufferSubData(GL_ARRAY_BUFFER, 0, gVertexDataSizeInBytes, m->positions);
-    glBufferSubData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes, gNormalDataSizeInBytes, normalData);
-    glBufferSubData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes + gNormalDataSizeInBytes, gTexCoordDataSizeInBytes, texCoordData);
-    // texCoordData
-    
+    glGenVertexArrays(1, &skyboxVAO);
+    glGenBuffers(1, &skyboxVBO);
+    glGenBuffers(1, &skyboxEBO);
+    glBindVertexArray(skyboxVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glBufferData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes, m->positions, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyboxEBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSizeInBytes, indexData, GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    // All the faces of the cubemap (make sure they are in this exact order)
+    std::string facesCubemap[6] =
+    {
+        "objects/left.png",
+        "objects/front.png",
+        "objects/right.png",
+        "objects/back.png",
+        "objects/bottom.png",
+        "objects/top.png"
+    };
+
+    // Creates the cubemap texture object
+    glGenTextures(1, &cubemapTexture);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    // These are very important to prevent seams
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    // This might help with seams on some systems
+    //glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+    // Cycles through all the textures and attaches them to the cubemap object
+    for (unsigned int i = 0; i < 6; i++)
+    {
+        int width, height, nrChannels;
+        unsigned char* data = stbi_load(facesCubemap[i].c_str(), &width, &height, &nrChannels, 0);
+        if (data)
+        {
+            stbi_set_flip_vertically_on_load(false);
+            glTexImage2D
+            (
+                GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                0,
+                GL_RGB,
+                width,
+                height,
+                0,
+                GL_RGB,
+                GL_UNSIGNED_BYTE,
+                data
+            );
+            stbi_image_free(data);
+        }
+        else
+        {
+            std::cout << "Failed to load texture: " << facesCubemap[i] << std::endl;
+            stbi_image_free(data);
+        }
+    }
 
     // done copying; can free now
     delete[] indexData;
     delete[] normalData;
+    delete[] texCoordData;
     fast_obj_destroy(m);
 }
 
@@ -222,14 +218,16 @@ void initWindowShape(){
     projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
     viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
     
-    glUseProgram(gProgram);
+    glUseProgram(gCharacterProgram);
     glUniformMatrix4fv(projectionMatrixLoc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
     glUniformMatrix4fv(viewingMatrixLoc, 1, GL_FALSE, glm::value_ptr(viewingMatrix));
 }
 
 
+
+
 void init(){
-    m = fast_obj_read("objects/bicycle.obj");
+    m = fast_obj_read("objects/cube.obj");
     // m = fast_obj_read("cat.obj");
     cout << "m->normal_count: " << m->normal_count << "\n" ;
     cout << "m->position_count: " << m->position_count << "\n" ;
@@ -238,43 +236,43 @@ void init(){
 
     glEnable(GL_DEPTH_TEST);
     initShaders();
-    initTexture();
+    //initTexture();
     initVBO();
     initWindowShape();
 }
 
-void drawModel(){
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(gVertexDataSizeInBytes));
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(gVertexDataSizeInBytes + gNormalDataSizeInBytes));
-
-    glDrawElements(GL_TRIANGLES, faceEntries , GL_UNSIGNED_INT, 0);
-}
-
-void display(){
-    float currentFrame = glfwGetTime();
-    deltaTime = currentFrame - lastFrame;
-    lastFrame = currentFrame;
+void renderSkyBox(){
+    glDepthFunc(GL_LEQUAL);
     
-    glClearColor(0, 0, 0, 1);
-    glClearDepth(1.0f);
-    glClearStencil(0);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-    viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
     glm::mat4 matR = glm::rotate(glm::mat4(1.f), glm::radians(-90.0f), glm::vec3(1, 0, 0));
-    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(0.02f ,0.02f ,0.02f));
+    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(8.0f ,8.0f ,9.0f));
     glm::mat4 matT = glm::translate(glm::mat4(1.0), movementOffset);
     modelingMatrix = matT * matS * matR;
-
-    // Set the active program and the values of its uniform variables
-    glUseProgram(gProgram);
+    
+    glUseProgram(gCharacterProgram);
+    glUniform1i(glGetUniformLocation(gCharacterProgram, "skybox"), 0);
     glUniformMatrix4fv(viewingMatrixLoc, 1, GL_FALSE, glm::value_ptr(viewingMatrix));
     glUniformMatrix4fv(modelingMatrixLoc, 1, GL_FALSE, glm::value_ptr(modelingMatrix));
     glUniform3fv(eyePosLoc, 1, glm::value_ptr(eyePos));
+    
+    glBindVertexArray(skyboxVAO);
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
 
-    // Draw the scene
-    drawModel();
+    // Switch back to the normal depth function
+    glDepthFunc(GL_LESS);
+}
+
+void renderCharacter(){
+    ;
+}
+
+void display(){
+    viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
+    renderSkyBox();
+    renderCharacter();
 }
 
 void movementKeys(GLFWwindow* window){
@@ -328,9 +326,24 @@ void mouse(GLFWwindow* window, double xpos, double ypos){
     eyeFront = glm::normalize(direction);
 }
 
+void calculateFrameTime(){
+    float currentFrame = glfwGetTime();
+    deltaTime = currentFrame - lastFrame;
+    lastFrame = currentFrame;
+}
+
+void cleanBuffers(){
+    glClearColor(0, 0, 0, 1);
+    glClearDepth(1.0f);
+    glClearStencil(0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+}
+
 void mainLoop(GLFWwindow* window){
     while (!glfwWindowShouldClose(window)){
         movementKeys(window);
+        calculateFrameTime();
+        cleanBuffers();
         display();
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -350,7 +363,7 @@ int main(int argc, char** argv){
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
     glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
     
-    window = glfwCreateWindow(gWidth, gHeight, "Simple Example", NULL, NULL);
+    window = glfwCreateWindow(gWidth, gHeight, "CENG469_HW2", NULL, NULL);
 
     if (!window){
         glfwTerminate();
