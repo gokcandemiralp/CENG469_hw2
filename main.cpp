@@ -38,9 +38,9 @@ void initShaders(){
     }
     
     groundSprite.gProgram = glCreateProgram();
-    // GLuint vs2 = createVS("shaders/vertCharacter.glsl");
-    GLuint fs2 = createFS("shaders/fragCharacter.glsl");
-    glAttachShader(groundSprite.gProgram, vs1);
+    GLuint vs2 = createVS("shaders/vertGround.glsl");
+    GLuint fs2 = createFS("shaders/fragGround.glsl");
+    glAttachShader(groundSprite.gProgram, vs2);
     glAttachShader(groundSprite.gProgram, fs2);
     glLinkProgram(groundSprite.gProgram);
     glGetProgramiv(groundSprite.gProgram, GL_LINK_STATUS, &status);
@@ -95,12 +95,12 @@ void initSkyBoxBuffer(){
 
     // All the faces of the cubemap (make sure they are in this exact order)
     std::string facesCubemap[6]={
-        "objects/right.png",
-        "objects/left.png",
-        "objects/top.png",
-        "objects/bottom.png",
-        "objects/front.png",
-        "objects/back.png"
+        "textures/right.png",
+        "textures/left.png",
+        "textures/top.png",
+        "textures/bottom.png",
+        "textures/front.png",
+        "textures/back.png"
     };
 
     // Creates the cubemap texture object
@@ -148,20 +148,27 @@ void initSkyBoxBuffer(){
 void initGroundBuffer(){
     int vertexEntries, texCoordEntries, faceEntries;
     
-    glGenVertexArrays(1, &groundSprite.VAO);
-    glBindVertexArray(groundSprite.VAO);
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
-    assert(glGetError() == GL_NONE);
-
-    glGenBuffers(1, &groundSprite.VBO);
-    glGenBuffers(1, &groundSprite.EBO);
+    glGenTextures(1, &groundSprite.textureID);
+    glBindTexture(GL_TEXTURE_2D, groundSprite.textureID);
     
-    glBindBuffer(GL_ARRAY_BUFFER, groundSprite.VBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundSprite.EBO);
-
+    // set the texture wrapping/filtering options (on the currently bound texture object)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // load and generate the texture
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load("textures/gravel.jpeg", &width, &height, &nrChannels, 0);
+    if (data){
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else{
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    
+    stbi_image_free(data);
+    
     vertexEntries = groundSprite.model->position_count * 3;
     texCoordEntries = groundSprite.model->position_count * 2;
     faceEntries = groundSprite.model->face_count * 6;
@@ -180,6 +187,19 @@ void initGroundBuffer(){
         indexData[3 * i + 2] = groundSprite.model->indices[3 * i + 2].p;
     }
 
+    glGenVertexArrays(1, &groundSprite.VAO);
+    glBindVertexArray(groundSprite.VAO);
+
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
+    assert(glGetError() == GL_NONE);
+
+    glGenBuffers(1, &groundSprite.VBO);
+    glGenBuffers(1, &groundSprite.EBO);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, groundSprite.VBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundSprite.EBO);
 
     glBufferData(GL_ARRAY_BUFFER, groundSprite.vertexDataSize +
                                   groundSprite.normalDataSize +
@@ -212,20 +232,10 @@ void initWindowShape(){
 
 void init(){
     skyBoxSprite.model = fast_obj_read("objects/cube.obj");
-    cout << "skyBoxSprite.model->normal_count: " << skyBoxSprite.model->normal_count << "\n" ;
-    cout << "skyBoxSprite.model->position_count: " << skyBoxSprite.model->position_count << "\n" ;
-    cout << "skyBoxSprite.model->face_count: " << skyBoxSprite.model->face_count << "\n" ;
-    cout << "skyBoxSprite.model->texcoord_count: " << skyBoxSprite.model->texcoord_count << "\n" ;
-    
     groundSprite.model = fast_obj_read("objects/ground.obj");
-    cout << "groundSprite.model->normal_count: " << groundSprite.model->normal_count << "\n" ;
-    cout << "groundSprite.model->position_count: " << groundSprite.model->position_count << "\n" ;
-    cout << "groundSprite.model->face_count: " << groundSprite.model->face_count << "\n" ;
-    cout << "groundSprite.model->texcoord_count: " << groundSprite.model->texcoord_count << "\n" ;
 
     glEnable(GL_DEPTH_TEST);
     initShaders();
-    //initTexture();
     initSkyBoxBuffer();
     initGroundBuffer();
     initWindowShape();
@@ -257,6 +267,7 @@ void renderGround(){
     glm::mat4 modelingMatrix = matT * matS;
     
     glUseProgram(groundSprite.gProgram);
+    glUniform1i(glGetUniformLocation(groundSprite.gProgram, "ground"), 0); // set it manually
     glUniformMatrix4fv(glGetUniformLocation(groundSprite.gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
     glUniformMatrix4fv(glGetUniformLocation(groundSprite.gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
     glUniform3fv(glGetUniformLocation(groundSprite.gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
