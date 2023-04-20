@@ -1,7 +1,7 @@
 #include "main.h"
 
 spriteInfo skyBoxSprite;
-spriteInfo characterSprite;
+spriteInfo groundSprite;
 
 int gWidth = 800, gHeight = 450;
 glm::mat4 projectionMatrix;
@@ -10,7 +10,7 @@ glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);
 glm::vec3 eyeFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 eyeUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 
-glm::vec3 movementOffset(0.0f, 0.0f, 0.0f);
+glm::vec3 movementOffset(0.0f, -1.0f, 0.0f);
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 float eyeSpeed = 1.0f;
@@ -37,13 +37,13 @@ void initShaders(){
         exit(-1);
     }
     
-    characterSprite.gProgram = glCreateProgram();
+    groundSprite.gProgram = glCreateProgram();
     // GLuint vs2 = createVS("shaders/vertCharacter.glsl");
     GLuint fs2 = createFS("shaders/fragCharacter.glsl");
-    glAttachShader(characterSprite.gProgram, vs1);
-    glAttachShader(characterSprite.gProgram, fs2);
-    glLinkProgram(characterSprite.gProgram);
-    glGetProgramiv(characterSprite.gProgram, GL_LINK_STATUS, &status);
+    glAttachShader(groundSprite.gProgram, vs1);
+    glAttachShader(groundSprite.gProgram, fs2);
+    glLinkProgram(groundSprite.gProgram);
+    glGetProgramiv(groundSprite.gProgram, GL_LINK_STATUS, &status);
 
     if (status != GL_TRUE){
         cout << "Program link failed" << endl;
@@ -63,13 +63,13 @@ void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordInd
 }
 
 void initSkyBoxBuffer(){
-    int vertexEntries, faceEntries, vertexDataSize, indexDataSize;
+    int vertexEntries, faceEntries;
     
     vertexEntries = skyBoxSprite.model->position_count * 3;
     faceEntries = skyBoxSprite.model->face_count * 3;
     
-    vertexDataSize = vertexEntries * sizeof(GLfloat);
-    indexDataSize = faceEntries * sizeof(GLuint);
+    groundSprite.vertexDataSize = vertexEntries * sizeof(GLfloat);
+    groundSprite.indexDataSize = faceEntries * sizeof(GLuint);
     GLuint* indexData = new GLuint[faceEntries];
     
     for (int i = 0; i < skyBoxSprite.model->face_count; ++i){
@@ -84,9 +84,9 @@ void initSkyBoxBuffer(){
     
     glBindVertexArray(skyBoxSprite.VAO);
     glBindBuffer(GL_ARRAY_BUFFER, skyBoxSprite.VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertexDataSize, skyBoxSprite.model->positions, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, groundSprite.vertexDataSize, skyBoxSprite.model->positions, GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyBoxSprite.EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSize, indexData, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, groundSprite.indexDataSize, indexData, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -146,7 +146,56 @@ void initSkyBoxBuffer(){
 }
 
 void initGroundBuffer(){
+    int vertexEntries, texCoordEntries, faceEntries;
     
+    glGenVertexArrays(1, &groundSprite.VAO);
+    glBindVertexArray(groundSprite.VAO);
+
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glEnableVertexAttribArray(2);
+    assert(glGetError() == GL_NONE);
+
+    glGenBuffers(1, &groundSprite.VBO);
+    glGenBuffers(1, &groundSprite.EBO);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, groundSprite.VBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundSprite.EBO);
+
+    vertexEntries = groundSprite.model->position_count * 3;
+    texCoordEntries = groundSprite.model->position_count * 2;
+    faceEntries = groundSprite.model->face_count * 6;
+    
+    groundSprite.vertexDataSize = vertexEntries * sizeof(GLfloat);
+    groundSprite.normalDataSize = vertexEntries * sizeof(GLfloat);
+    groundSprite.texCoordDataSize = texCoordEntries * sizeof(GLfloat);
+    groundSprite.indexDataSize = faceEntries * sizeof(GLuint);
+    GLfloat* normalData = new GLfloat[vertexEntries];
+    GLfloat* texCoordData = new GLfloat[texCoordEntries];
+    GLuint* indexData = new GLuint[faceEntries];
+    
+    for (int i = 0; i < groundSprite.model->face_count; ++i){
+        indexData[3 * i] = groundSprite.model->indices[3 * i].p;
+        indexData[3 * i + 1] = groundSprite.model->indices[3 * i + 1].p;
+        indexData[3 * i + 2] = groundSprite.model->indices[3 * i + 2].p;
+    }
+
+
+    glBufferData(GL_ARRAY_BUFFER, groundSprite.vertexDataSize +
+                                  groundSprite.normalDataSize +
+                                  groundSprite.texCoordDataSize, 0, GL_STATIC_DRAW);
+    
+    glBufferSubData(GL_ARRAY_BUFFER, 0, groundSprite.vertexDataSize, groundSprite.model->positions);
+    glBufferSubData(GL_ARRAY_BUFFER, groundSprite.vertexDataSize, groundSprite.normalDataSize, normalData);
+    glBufferSubData(GL_ARRAY_BUFFER, groundSprite.vertexDataSize + groundSprite.normalDataSize, groundSprite.texCoordDataSize, texCoordData);
+    
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, groundSprite.indexDataSize, indexData, GL_STATIC_DRAW);
+
+    // done copying; can free now
+    delete[] indexData;
+    delete[] texCoordData;
+    delete[] normalData;
+    fast_obj_destroy(groundSprite.model);
 }
 
 void initWindowShape(){
@@ -157,22 +206,28 @@ void initWindowShape(){
     glUseProgram(skyBoxSprite.gProgram);
     glUniformMatrix4fv(glGetUniformLocation(skyBoxSprite.gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
     
-    glUseProgram(characterSprite.gProgram);
-    glUniformMatrix4fv(glGetUniformLocation(characterSprite.gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+    glUseProgram(groundSprite.gProgram);
+    glUniformMatrix4fv(glGetUniformLocation(groundSprite.gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 }
 
 void init(){
     skyBoxSprite.model = fast_obj_read("objects/cube.obj");
-    // m = fast_obj_read("cat.obj");
     cout << "skyBoxSprite.model->normal_count: " << skyBoxSprite.model->normal_count << "\n" ;
     cout << "skyBoxSprite.model->position_count: " << skyBoxSprite.model->position_count << "\n" ;
     cout << "skyBoxSprite.model->face_count: " << skyBoxSprite.model->face_count << "\n" ;
     cout << "skyBoxSprite.model->texcoord_count: " << skyBoxSprite.model->texcoord_count << "\n" ;
+    
+    groundSprite.model = fast_obj_read("objects/ground.obj");
+    cout << "groundSprite.model->normal_count: " << groundSprite.model->normal_count << "\n" ;
+    cout << "groundSprite.model->position_count: " << groundSprite.model->position_count << "\n" ;
+    cout << "groundSprite.model->face_count: " << groundSprite.model->face_count << "\n" ;
+    cout << "groundSprite.model->texcoord_count: " << groundSprite.model->texcoord_count << "\n" ;
 
     glEnable(GL_DEPTH_TEST);
     initShaders();
     //initTexture();
     initSkyBoxBuffer();
+    initGroundBuffer();
     initWindowShape();
 }
 
@@ -196,29 +251,28 @@ void renderSkyBox(){
     glEnable(GL_DEPTH_TEST);    // Switch the depth function back on
 }
 
-void renderCharacter(){
-    glm::mat4 matR = glm::rotate(glm::mat4(1.f), glm::radians(-90.0f), glm::vec3(1, 0, 0));
-    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(1.0f ,1.0f ,1.0f));
+void renderGround(){
+    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(100.0f ,100.0f ,100.0f));
     glm::mat4 matT = glm::translate(glm::mat4(1.0), movementOffset);
-    glm::mat4 modelingMatrix = matT * matS * matR;
+    glm::mat4 modelingMatrix = matT * matS;
     
-    glUseProgram(characterSprite.gProgram);
-    glUniform1i(glGetUniformLocation(characterSprite.gProgram, "skybox"), 0);
-    glUniformMatrix4fv(glGetUniformLocation(characterSprite.gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
-    glUniformMatrix4fv(glGetUniformLocation(characterSprite.gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
-    glUniform3fv(glGetUniformLocation(characterSprite.gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
+    glUseProgram(groundSprite.gProgram);
+    glUniformMatrix4fv(glGetUniformLocation(groundSprite.gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
+    glUniformMatrix4fv(glGetUniformLocation(groundSprite.gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
+    glUniform3fv(glGetUniformLocation(groundSprite.gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
     
-    glBindVertexArray(skyBoxSprite.VAO);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxSprite.textureID);
-    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
+    glBindVertexArray(groundSprite.VAO);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(groundSprite.vertexDataSize));
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(groundSprite.vertexDataSize + groundSprite.normalDataSize));
+
+    glDrawElements(GL_TRIANGLES, 6 , GL_UNSIGNED_INT, 0);
 }
 
 void display(){
     viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
     renderSkyBox();
-    renderCharacter();
+    renderGround();
 }
 
 void movementKeys(GLFWwindow* window){
