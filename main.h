@@ -104,5 +104,51 @@ bool ReadDataFromFile(
     return true;
 }
 
+GLuint createVS(const char* shaderName){
+    string shaderSource;
+
+    string filename(shaderName);
+    if (!ReadDataFromFile(filename, shaderSource)){
+        cout << "Cannot find file name: " + filename << endl;
+        exit(-1);
+    }
+
+    GLint length = shaderSource.length();
+    const GLchar* shader = (const GLchar*)shaderSource.c_str();
+
+    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vs, 1, &shader, &length);
+    glCompileShader(vs);
+
+    char output[1024] = { 0 };
+    glGetShaderInfoLog(vs, 1024, &length, output);
+    printf("VS compile log: %s\n", output);
+
+    return vs;
+}
+
+GLuint createFS(const char* shaderName){
+    string shaderSource;
+
+    string filename(shaderName);
+    if (!ReadDataFromFile(filename, shaderSource)){
+        cout << "Cannot find file name: " + filename << endl;
+        exit(-1);
+    }
+
+    GLint length = shaderSource.length();
+    const GLchar* shader = (const GLchar*)shaderSource.c_str();
+
+    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fs, 1, &shader, &length);
+    glCompileShader(fs);
+
+    char output[1024] = { 0 };
+    glGetShaderInfoLog(fs, 1024, &length, output);
+    printf("FS compile log: %s\n", output);
+
+    return fs;
+}
+
 
 #endif
