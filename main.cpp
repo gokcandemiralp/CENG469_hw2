@@ -3,7 +3,6 @@
 spriteInfo skyBoxSprite;
 spriteInfo characterSprite;
 
-
 int gWidth = 800, gHeight = 450;
 glm::mat4 projectionMatrix;
 glm::mat4 viewingMatrix;
@@ -21,13 +20,6 @@ float mouseLastY=gHeight/2;
 const float sensitivity = 0.1f;
 float yaw = -90.0f;
 float pitch = 0.0f;
-
-
-GLuint gVertexAttribBuffer, gIndexBuffer;
-int gVertexDataSizeInBytes, gNormalDataSizeInBytes, indexDataSizeInBytes, gTexCoordDataSizeInBytes;
-int vertexEntries, normalEntries, faceEntries, texCoordEntries;
-
-fastObjMesh* m;
 
 void initShaders(){
     GLint status;
@@ -60,31 +52,30 @@ void initShaders(){
 }
 
 void writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
-    normalData[3 * vertexIndex] = m->normals[3 * normalIndex];
-    normalData[3 * vertexIndex + 1] = m->normals[3 * normalIndex + 1];
-    normalData[3 * vertexIndex + 2] = m->normals[3 * normalIndex + 2];
+    normalData[3 * vertexIndex] = skyBoxSprite.model->normals[3 * normalIndex];
+    normalData[3 * vertexIndex + 1] = skyBoxSprite.model->normals[3 * normalIndex + 1];
+    normalData[3 * vertexIndex + 2] = skyBoxSprite.model->normals[3 * normalIndex + 2];
 }
 
 void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
-    texCoordData[2 * vertexIndex] = m->texcoords[2 * texCoordIndex];
-    texCoordData[2 * vertexIndex + 1] = 1.0f - m->texcoords[2 * texCoordIndex + 1];
+    texCoordData[2 * vertexIndex] = skyBoxSprite.model->texcoords[2 * texCoordIndex];
+    texCoordData[2 * vertexIndex + 1] = 1.0f - skyBoxSprite.model->texcoords[2 * texCoordIndex + 1];
 }
 
-void initVBO(){
-    vertexEntries = m->position_count * 3;
-    texCoordEntries = m->position_count * 2;
-    faceEntries = m->face_count * 3;
+void initSkyBoxBuffer(){
+    int vertexEntries, faceEntries, vertexDataSize, indexDataSize;
     
-    gVertexDataSizeInBytes = vertexEntries * sizeof(GLfloat);
-    gNormalDataSizeInBytes = vertexEntries * sizeof(GLfloat);
-    gTexCoordDataSizeInBytes = texCoordEntries * sizeof(GLfloat);
-    indexDataSizeInBytes = faceEntries * sizeof(GLuint);
+    vertexEntries = skyBoxSprite.model->position_count * 3;
+    faceEntries = skyBoxSprite.model->face_count * 3;
+    
+    vertexDataSize = vertexEntries * sizeof(GLfloat);
+    indexDataSize = faceEntries * sizeof(GLuint);
     GLuint* indexData = new GLuint[faceEntries];
     
-    for (int i = 0; i < m->face_count; ++i){
-        indexData[3 * i] = m->indices[3 * i].p;
-        indexData[3 * i + 1] = m->indices[3 * i + 1].p;
-        indexData[3 * i + 2] = m->indices[3 * i + 2].p;
+    for (int i = 0; i < skyBoxSprite.model->face_count; ++i){
+        indexData[3 * i] = skyBoxSprite.model->indices[3 * i].p;
+        indexData[3 * i + 1] = skyBoxSprite.model->indices[3 * i + 1].p;
+        indexData[3 * i + 2] = skyBoxSprite.model->indices[3 * i + 2].p;
     }
 
     glGenVertexArrays(1, &skyBoxSprite.VAO);
@@ -93,9 +84,9 @@ void initVBO(){
     
     glBindVertexArray(skyBoxSprite.VAO);
     glBindBuffer(GL_ARRAY_BUFFER, skyBoxSprite.VBO);
-    glBufferData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes, m->positions, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertexDataSize, skyBoxSprite.model->positions, GL_STATIC_DRAW);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyBoxSprite.EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSizeInBytes, indexData, GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSize, indexData, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
@@ -151,7 +142,11 @@ void initVBO(){
 
     // done copying; can free now
     delete[] indexData;
-    fast_obj_destroy(m);
+    fast_obj_destroy(skyBoxSprite.model);
+}
+
+void initGroundBuffer(){
+    
 }
 
 void initWindowShape(){
@@ -167,22 +162,22 @@ void initWindowShape(){
 }
 
 void init(){
-    m = fast_obj_read("objects/cube.obj");
+    skyBoxSprite.model = fast_obj_read("objects/cube.obj");
     // m = fast_obj_read("cat.obj");
-    cout << "m->normal_count: " << m->normal_count << "\n" ;
-    cout << "m->position_count: " << m->position_count << "\n" ;
-    cout << "m->face_count: " << m->face_count << "\n" ;
-    cout << "m->texcoord_count: " << m->texcoord_count << "\n" ;
+    cout << "skyBoxSprite.model->normal_count: " << skyBoxSprite.model->normal_count << "\n" ;
+    cout << "skyBoxSprite.model->position_count: " << skyBoxSprite.model->position_count << "\n" ;
+    cout << "skyBoxSprite.model->face_count: " << skyBoxSprite.model->face_count << "\n" ;
+    cout << "skyBoxSprite.model->texcoord_count: " << skyBoxSprite.model->texcoord_count << "\n" ;
 
     glEnable(GL_DEPTH_TEST);
     initShaders();
     //initTexture();
-    initVBO();
+    initSkyBoxBuffer();
     initWindowShape();
 }
 
 void renderSkyBox(){
-    glDepthFunc(GL_LEQUAL);
+    glDisable(GL_DEPTH_TEST);
     
     glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(8.0f ,8.0f ,8.0f));
     glm::mat4 modelingMatrix = matS;
@@ -198,7 +193,7 @@ void renderSkyBox(){
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
-    glDepthFunc(GL_LESS);   // Switch back to the normal depth function
+    glEnable(GL_DEPTH_TEST);    // Switch the depth function back on
 }
 
 void renderCharacter(){

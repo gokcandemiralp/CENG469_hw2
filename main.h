@@ -38,6 +38,8 @@ using namespace tinyobj;
 
 struct spriteInfo{
     GLuint gProgram, VAO, VBO, EBO, textureID;
+    fastObjMesh* model;
+    // GLuint vertexDataSize, normalDataSize, indexDataSize, texCoordDataSize;
 };
 
 struct Vertex{
