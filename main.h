@@ -36,6 +36,10 @@ using namespace tinyobj;
 #define CHECK(_c) check(_c, #_c)
 #define VERTEX_PER_FACE 4
 
+struct spriteInfo{
+    GLuint gProgram, VAO, VBO, EBO, textureID;
+};
+
 struct Vertex{
     Vertex(GLfloat inX, GLfloat inY, GLfloat inZ) : x(inX), y(inY), z(inZ) { }
     GLfloat x, y, z;
@@ -113,7 +117,7 @@ GLuint createVS(const char* shaderName){
         exit(-1);
     }
 
-    GLint length = shaderSource.length();
+    GLint length = (GLint)shaderSource.length();
     const GLchar* shader = (const GLchar*)shaderSource.c_str();
 
     GLuint vs = glCreateShader(GL_VERTEX_SHADER);
@@ -136,7 +140,7 @@ GLuint createFS(const char* shaderName){
         exit(-1);
     }
 
-    GLint length = shaderSource.length();
+    GLint length = (GLint)shaderSource.length();
     const GLchar* shader = (const GLchar*)shaderSource.c_str();
 
     GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);

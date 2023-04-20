@@ -1,16 +1,12 @@
 #include "main.h"
 
-GLuint gCharacterProgram;
-GLuint gSkyBoxProgram;
-unsigned int skyboxVAO, skyboxVBO, skyboxEBO;
-unsigned int cubemapTexture;
+spriteInfo skyBoxSprite;
+spriteInfo characterSprite;
+
 
 int gWidth = 800, gHeight = 450;
-
 glm::mat4 projectionMatrix;
 glm::mat4 viewingMatrix;
-glm::mat4 modelingMatrix;
-
 glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);
 glm::vec3 eyeFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 eyeUp    = glm::vec3(0.0f, 1.0f,  0.0f);
@@ -36,26 +32,26 @@ fastObjMesh* m;
 void initShaders(){
     GLint status;
     
-    gSkyBoxProgram = glCreateProgram();
+    skyBoxSprite.gProgram = glCreateProgram();
     GLuint vs1 = createVS("shaders/vertSkybox.glsl");
     GLuint fs1 = createFS("shaders/fragSkybox.glsl");
-    glAttachShader(gSkyBoxProgram, vs1);
-    glAttachShader(gSkyBoxProgram, fs1);
-    glLinkProgram(gSkyBoxProgram);
-    glGetProgramiv(gSkyBoxProgram, GL_LINK_STATUS, &status);
+    glAttachShader(skyBoxSprite.gProgram, vs1);
+    glAttachShader(skyBoxSprite.gProgram, fs1);
+    glLinkProgram(skyBoxSprite.gProgram);
+    glGetProgramiv(skyBoxSprite.gProgram, GL_LINK_STATUS, &status);
 
     if (status != GL_TRUE){
         cout << "Program link failed" << endl;
         exit(-1);
     }
     
-    gCharacterProgram = glCreateProgram();
+    characterSprite.gProgram = glCreateProgram();
     // GLuint vs2 = createVS("shaders/vertCharacter.glsl");
     GLuint fs2 = createFS("shaders/fragCharacter.glsl");
-    glAttachShader(gCharacterProgram, vs1);
-    glAttachShader(gCharacterProgram, fs2);
-    glLinkProgram(gCharacterProgram);
-    glGetProgramiv(gCharacterProgram, GL_LINK_STATUS, &status);
+    glAttachShader(characterSprite.gProgram, vs1);
+    glAttachShader(characterSprite.gProgram, fs2);
+    glLinkProgram(characterSprite.gProgram);
+    glGetProgramiv(characterSprite.gProgram, GL_LINK_STATUS, &status);
 
     if (status != GL_TRUE){
         cout << "Program link failed" << endl;
@@ -91,13 +87,14 @@ void initVBO(){
         indexData[3 * i + 2] = m->indices[3 * i + 2].p;
     }
 
-    glGenVertexArrays(1, &skyboxVAO);
-    glGenBuffers(1, &skyboxVBO);
-    glGenBuffers(1, &skyboxEBO);
-    glBindVertexArray(skyboxVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+    glGenVertexArrays(1, &skyBoxSprite.VAO);
+    glGenBuffers(1, &skyBoxSprite.VBO);
+    glGenBuffers(1, &skyBoxSprite.EBO);
+    
+    glBindVertexArray(skyBoxSprite.VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, skyBoxSprite.VBO);
     glBufferData(GL_ARRAY_BUFFER, gVertexDataSizeInBytes, m->positions, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyboxEBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, skyBoxSprite.EBO);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSizeInBytes, indexData, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
@@ -116,8 +113,8 @@ void initVBO(){
     };
 
     // Creates the cubemap texture object
-    glGenTextures(1, &cubemapTexture);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+    glGenTextures(1, &skyBoxSprite.textureID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxSprite.textureID);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     // These are very important to prevent seams
@@ -162,11 +159,11 @@ void initWindowShape(){
     float fovyRad = (float)(45.0 / 180.0) * M_PI;
     projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
     
-    glUseProgram(gSkyBoxProgram);
-    glUniformMatrix4fv(glGetUniformLocation(gSkyBoxProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+    glUseProgram(skyBoxSprite.gProgram);
+    glUniformMatrix4fv(glGetUniformLocation(skyBoxSprite.gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
     
-    glUseProgram(gCharacterProgram);
-    glUniformMatrix4fv(glGetUniformLocation(gCharacterProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+    glUseProgram(characterSprite.gProgram);
+    glUniformMatrix4fv(glGetUniformLocation(characterSprite.gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 }
 
 void init(){
@@ -188,16 +185,16 @@ void renderSkyBox(){
     glDepthFunc(GL_LEQUAL);
     
     glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(8.0f ,8.0f ,8.0f));
-    modelingMatrix = matS;
+    glm::mat4 modelingMatrix = matS;
     
-    glUseProgram(gSkyBoxProgram);
-    glUniform1i(glGetUniformLocation(gSkyBoxProgram, "skybox"), 0);
-    glUniformMatrix4fv(glGetUniformLocation(gSkyBoxProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
-    glUniformMatrix4fv(glGetUniformLocation(gSkyBoxProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
+    glUseProgram(skyBoxSprite.gProgram);
+    glUniform1i(glGetUniformLocation(skyBoxSprite.gProgram, "skybox"), 0);
+    glUniformMatrix4fv(glGetUniformLocation(skyBoxSprite.gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
+    glUniformMatrix4fv(glGetUniformLocation(skyBoxSprite.gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
     
-    glBindVertexArray(skyboxVAO);
+    glBindVertexArray(skyBoxSprite.VAO);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxSprite.textureID);
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 
@@ -208,17 +205,17 @@ void renderCharacter(){
     glm::mat4 matR = glm::rotate(glm::mat4(1.f), glm::radians(-90.0f), glm::vec3(1, 0, 0));
     glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(1.0f ,1.0f ,1.0f));
     glm::mat4 matT = glm::translate(glm::mat4(1.0), movementOffset);
-    modelingMatrix = matT * matS * matR;
+    glm::mat4 modelingMatrix = matT * matS * matR;
     
-    glUseProgram(gCharacterProgram);
-    glUniform1i(glGetUniformLocation(gCharacterProgram, "skybox"), 0);
-    glUniformMatrix4fv(glGetUniformLocation(gCharacterProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
-    glUniformMatrix4fv(glGetUniformLocation(gCharacterProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
-    glUniform3fv(glGetUniformLocation(gCharacterProgram, "eyePos"), 1, glm::value_ptr(eyePos));
+    glUseProgram(characterSprite.gProgram);
+    glUniform1i(glGetUniformLocation(characterSprite.gProgram, "skybox"), 0);
+    glUniformMatrix4fv(glGetUniformLocation(characterSprite.gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
+    glUniformMatrix4fv(glGetUniformLocation(characterSprite.gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
+    glUniform3fv(glGetUniformLocation(characterSprite.gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
     
-    glBindVertexArray(skyboxVAO);
+    glBindVertexArray(skyBoxSprite.VAO);
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, cubemapTexture);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxSprite.textureID);
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
     glBindVertexArray(0);
 }
