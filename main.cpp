@@ -83,6 +83,7 @@ void initSkyBoxBuffer(){
 
     // Creates the cubemap texture object
     glGenTextures(1, &skyBoxSprite.textureID);
+    cout << "skyBoxSprite.textureID:" << skyBoxSprite.textureID << "\n";
     glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxSprite.textureID);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -128,6 +129,7 @@ void initGroundBuffer(){
     int vertexEntries, texCoordEntries, faceEntries;
     
     glGenTextures(1, &groundSprite.textureID);
+    cout << "groundSprite.textureID:" << groundSprite.textureID << "\n";
     glBindTexture(GL_TEXTURE_2D, groundSprite.textureID);
     
     // set the texture wrapping/filtering options (on the currently bound texture object)
@@ -181,18 +183,69 @@ void initGroundBuffer(){
     fast_obj_destroy(groundSprite.model);
 }
 
+void initStatueBuffer(){
+    statueSprite.model = fast_obj_read("objects/bunny.obj");
+    int vertexEntries;
+    
+    glGenTextures(1, &statueSprite.textureID);
+    cout << "statueSprite.textureID:" << statueSprite.textureID << "\n";
+    glBindTexture(GL_TEXTURE_2D, statueSprite.textureID);
+    
+    // set the texture wrapping/filtering options (on the currently bound texture object)
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    // load and generate the texture
+    int width, height, nrChannels;
+    unsigned char *data = stbi_load("textures/rainbow.png", &width, &height, &nrChannels, 0);
+    if (data){
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+    }
+    else{
+        std::cout << "Failed to load texture" << std::endl;
+    }
+    
+    stbi_image_free(data);
+    
+    vertexEntries = statueSprite.model->position_count * 3;
+    statueSprite.faceEntries = statueSprite.model->face_count * 3;
+    
+    statueSprite.vertexDataSize = vertexEntries * sizeof(GLfloat);
+    statueSprite.indexDataSize = statueSprite.faceEntries * sizeof(GLuint);
+    GLuint* indexData = new GLuint[statueSprite.faceEntries];
+    
+    for (int i = 0; i < statueSprite.model->face_count; ++i){
+        indexData[3 * i] = statueSprite.model->indices[3 * i].p;
+        indexData[3 * i + 1] = statueSprite.model->indices[3 * i + 1].p;
+        indexData[3 * i + 2] = statueSprite.model->indices[3 * i + 2].p;
+    }
+
+    glGenVertexArrays(1, &statueSprite.VAO);
+    glBindVertexArray(statueSprite.VAO);
+
+    glEnableVertexAttribArray(0);
+    assert(glGetError() == GL_NONE);
+
+    glGenBuffers(1, &statueSprite.VBO);
+    glGenBuffers(1, &statueSprite.EBO);
+    
+    glBindBuffer(GL_ARRAY_BUFFER, statueSprite.VBO);
+    glBufferData(GL_ARRAY_BUFFER, statueSprite.vertexDataSize, statueSprite.model->positions, GL_STATIC_DRAW);
+    
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, statueSprite.EBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, statueSprite.indexDataSize, indexData, GL_STATIC_DRAW);
+
+    // done copying; can free now
+    delete[] indexData;
+    fast_obj_destroy(statueSprite.model);
+}
+
 void initWindowShape(){
     glViewport(0, 0, gWidth, gHeight);
     float fovyRad = (float)(45.0 / 180.0) * M_PI;
     projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
-}
-
-void init(){
-    glEnable(GL_DEPTH_TEST);
-    initWindowShape();
-    initShaders();
-    initSkyBoxBuffer();
-    initGroundBuffer();
 }
 
 void renderSkyBox(){
@@ -210,7 +263,6 @@ void renderSkyBox(){
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxSprite.textureID);
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-    glBindVertexArray(0);
 
     glEnable(GL_DEPTH_TEST);    // Switch the depth function back on
 }
@@ -227,15 +279,48 @@ void renderGround(){
     glUniform3fv(glGetUniformLocation(groundSprite.gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
     
     glBindVertexArray(groundSprite.VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, groundSprite.VBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundSprite.EBO);
+    glBindTexture(GL_TEXTURE_2D, groundSprite.textureID);
+    
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-
     glDrawElements(GL_TRIANGLES, 6 , GL_UNSIGNED_INT, 0);
+}
+
+void renderStatue(){
+    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(1.0f ,1.0f ,1.0f));
+    glm::mat4 matT = glm::translate(glm::mat4(1.0), movementOffset);
+    glm::mat4 modelingMatrix = matT * matS;
+    
+    glUseProgram(statueSprite.gProgram);
+    glUniform1i(glGetUniformLocation(statueSprite.gProgram, "ground"), 0); // set it manually
+    glUniformMatrix4fv(glGetUniformLocation(statueSprite.gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
+    glUniformMatrix4fv(glGetUniformLocation(statueSprite.gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
+    glUniform3fv(glGetUniformLocation(statueSprite.gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
+    
+    glBindVertexArray(statueSprite.VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, statueSprite.VBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, statueSprite.EBO);
+    glBindTexture(GL_TEXTURE_2D, statueSprite.textureID);
+    
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glDrawElements(GL_TRIANGLES, statueSprite.faceEntries , GL_UNSIGNED_INT, 0);
+}
+
+void init(){
+    glEnable(GL_DEPTH_TEST);
+    initWindowShape();
+    initShaders();
+    initSkyBoxBuffer();
+    initGroundBuffer();
+    initStatueBuffer();
 }
 
 void display(){
     viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
     renderSkyBox();
     renderGround();
+    renderStatue();
 }
 
 void movementKeys(GLFWwindow* window){
