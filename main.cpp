@@ -28,15 +28,15 @@ void initShaders(){
     initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl",statueSprite,projectionMatrix);
 }
 
-void writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
-    normalData[3 * vertexIndex] = skyBoxSprite.model->normals[3 * normalIndex];
-    normalData[3 * vertexIndex + 1] = skyBoxSprite.model->normals[3 * normalIndex + 1];
-    normalData[3 * vertexIndex + 2] = skyBoxSprite.model->normals[3 * normalIndex + 2];
+void writeVertexNormal(spriteInfo &sprite, GLfloat* normalData, int vertexIndex, int normalIndex){
+    normalData[3 * vertexIndex] = sprite.model->normals[3 * normalIndex];
+    normalData[3 * vertexIndex + 1] = sprite.model->normals[3 * normalIndex + 1];
+    normalData[3 * vertexIndex + 2] = sprite.model->normals[3 * normalIndex + 2];
 }
 
-void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
-    texCoordData[2 * vertexIndex] = skyBoxSprite.model->texcoords[2 * texCoordIndex];
-    texCoordData[2 * vertexIndex + 1] = 1.0f - skyBoxSprite.model->texcoords[2 * texCoordIndex + 1];
+void writeVertexTexCoord(spriteInfo &sprite, GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
+    texCoordData[2 * vertexIndex] = sprite.model->texcoords[2 * texCoordIndex];
+    texCoordData[2 * vertexIndex + 1] = 1.0f - sprite.model->texcoords[2 * texCoordIndex + 1];
 }
 
 void initSkyBoxBuffer(){
@@ -185,7 +185,6 @@ void initGroundBuffer(){
 
 void initStatueBuffer(){
     statueSprite.model = fast_obj_read("objects/bunny.obj");
-    int vertexEntries;
     
     glGenTextures(1, &statueSprite.textureID);
     cout << "statueSprite.textureID:" << statueSprite.textureID << "\n";
@@ -209,35 +208,49 @@ void initStatueBuffer(){
     
     stbi_image_free(data);
     
-    vertexEntries = statueSprite.model->position_count * 3;
+    statueSprite.vertexEntries = statueSprite.model->position_count * 3;
     statueSprite.faceEntries = statueSprite.model->face_count * 3;
     
-    statueSprite.vertexDataSize = vertexEntries * sizeof(GLfloat);
+    statueSprite.vertexDataSize = statueSprite.vertexEntries * sizeof(GLfloat);
+    statueSprite.normalDataSize = statueSprite.vertexEntries * sizeof(GLfloat);
     statueSprite.indexDataSize = statueSprite.faceEntries * sizeof(GLuint);
+    GLfloat* normalData = new GLfloat[statueSprite.vertexEntries];
     GLuint* indexData = new GLuint[statueSprite.faceEntries];
     
     for (int i = 0; i < statueSprite.model->face_count; ++i){
         indexData[3 * i] = statueSprite.model->indices[3 * i].p;
         indexData[3 * i + 1] = statueSprite.model->indices[3 * i + 1].p;
         indexData[3 * i + 2] = statueSprite.model->indices[3 * i + 2].p;
+        
+        writeVertexNormal(statueSprite, normalData, statueSprite.model->indices[3 * i].p,
+                          statueSprite.model->indices[3 * i].n);
+        writeVertexNormal(statueSprite ,normalData, statueSprite.model->indices[3 * i + 1].p,
+                          statueSprite.model->indices[3 * i + 1].n);
+        writeVertexNormal(statueSprite, normalData, statueSprite.model->indices[3 * i + 2].p,
+                          statueSprite.model->indices[3 * i + 2].n);
     }
 
     glGenVertexArrays(1, &statueSprite.VAO);
     glBindVertexArray(statueSprite.VAO);
 
     glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
     assert(glGetError() == GL_NONE);
 
     glGenBuffers(1, &statueSprite.VBO);
     glGenBuffers(1, &statueSprite.EBO);
     
     glBindBuffer(GL_ARRAY_BUFFER, statueSprite.VBO);
-    glBufferData(GL_ARRAY_BUFFER, statueSprite.vertexDataSize, statueSprite.model->positions, GL_STATIC_DRAW);
-    
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, statueSprite.EBO);
+    
+    glBufferData(GL_ARRAY_BUFFER, statueSprite.vertexDataSize + statueSprite.normalDataSize, 0, GL_STATIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, statueSprite.vertexDataSize, statueSprite.model->positions);
+    glBufferSubData(GL_ARRAY_BUFFER, statueSprite.vertexDataSize, statueSprite.normalDataSize, normalData);
+    
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, statueSprite.indexDataSize, indexData, GL_STATIC_DRAW);
 
     // done copying; can free now
+    delete[] normalData;
     delete[] indexData;
     fast_obj_destroy(statueSprite.model);
 }
@@ -304,6 +317,7 @@ void renderStatue(){
     glBindTexture(GL_TEXTURE_2D, statueSprite.textureID);
     
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(statueSprite.vertexDataSize));
     glDrawElements(GL_TRIANGLES, statueSprite.faceEntries , GL_UNSIGNED_INT, 0);
 }
 
