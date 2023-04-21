@@ -128,7 +128,7 @@ GLuint createVS(const char* shaderName){
 
     char output[1024] = { 0 };
     glGetShaderInfoLog(vs, 1024, &length, output);
-    printf("VS compile log: %s\n", output);
+    if(strcmp(output,"")){printf("VS compile log: %s\n", output);}
 
     return vs;
 }
@@ -151,7 +151,7 @@ GLuint createFS(const char* shaderName){
 
     char output[1024] = { 0 };
     glGetShaderInfoLog(fs, 1024, &length, output);
-    printf("FS compile log: %s\n", output);
+    if(strcmp(output,"")){printf("FS compile log: %s\n", output);}
 
     return fs;
 }

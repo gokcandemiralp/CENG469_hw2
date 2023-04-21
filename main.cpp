@@ -2,6 +2,7 @@
 
 spriteInfo skyBoxSprite;
 spriteInfo groundSprite;
+spriteInfo statueSprite;
 
 int gWidth = 800, gHeight = 450;
 glm::mat4 projectionMatrix;
@@ -22,31 +23,44 @@ float yaw = -90.0f;
 float pitch = 0.0f;
 
 void initShaders(){
-    GLint status;
+    GLint status, vs, fs;
     
     skyBoxSprite.gProgram = glCreateProgram();
-    GLuint vs1 = createVS("shaders/vertSkybox.glsl");
-    GLuint fs1 = createFS("shaders/fragSkybox.glsl");
-    glAttachShader(skyBoxSprite.gProgram, vs1);
-    glAttachShader(skyBoxSprite.gProgram, fs1);
+    vs = createVS("shaders/skyboxVert.glsl");
+    fs = createFS("shaders/skyboxFrag.glsl");
+    glAttachShader(skyBoxSprite.gProgram, vs);
+    glAttachShader(skyBoxSprite.gProgram, fs);
     glLinkProgram(skyBoxSprite.gProgram);
     glGetProgramiv(skyBoxSprite.gProgram, GL_LINK_STATUS, &status);
 
     if (status != GL_TRUE){
-        cout << "Program link failed" << endl;
+        cout << "Program link failed for program" << skyBoxSprite.gProgram << endl;
         exit(-1);
     }
     
     groundSprite.gProgram = glCreateProgram();
-    GLuint vs2 = createVS("shaders/vertGround.glsl");
-    GLuint fs2 = createFS("shaders/fragGround.glsl");
-    glAttachShader(groundSprite.gProgram, vs2);
-    glAttachShader(groundSprite.gProgram, fs2);
+    vs = createVS("shaders/groundVert.glsl");
+    fs = createFS("shaders/groundFrag.glsl");
+    glAttachShader(groundSprite.gProgram, vs);
+    glAttachShader(groundSprite.gProgram, fs);
     glLinkProgram(groundSprite.gProgram);
     glGetProgramiv(groundSprite.gProgram, GL_LINK_STATUS, &status);
 
     if (status != GL_TRUE){
-        cout << "Program link failed" << endl;
+        cout << "Program link failed for program" << groundSprite.gProgram << endl;
+        exit(-1);
+    }
+    
+    statueSprite.gProgram = glCreateProgram();
+    vs = createVS("shaders/statueVert.glsl");
+    fs = createFS("shaders/statueFrag.glsl");
+    glAttachShader(statueSprite.gProgram, vs);
+    glAttachShader(statueSprite.gProgram, fs);
+    glLinkProgram(statueSprite.gProgram);
+    glGetProgramiv(statueSprite.gProgram, GL_LINK_STATUS, &status);
+
+    if (status != GL_TRUE){
+        cout << "Program link failed for program" << statueSprite.gProgram << endl;
         exit(-1);
     }
 }
@@ -170,15 +184,10 @@ void initGroundBuffer(){
     stbi_image_free(data);
     
     vertexEntries = groundSprite.model->position_count * 3;
-    texCoordEntries = groundSprite.model->position_count * 2;
-    faceEntries = groundSprite.model->face_count * 6;
+    faceEntries = groundSprite.model->face_count * 3;
     
     groundSprite.vertexDataSize = vertexEntries * sizeof(GLfloat);
-    groundSprite.normalDataSize = vertexEntries * sizeof(GLfloat);
-    groundSprite.texCoordDataSize = texCoordEntries * sizeof(GLfloat);
     groundSprite.indexDataSize = faceEntries * sizeof(GLuint);
-    GLfloat* normalData = new GLfloat[vertexEntries];
-    GLfloat* texCoordData = new GLfloat[texCoordEntries];
     GLuint* indexData = new GLuint[faceEntries];
     
     for (int i = 0; i < groundSprite.model->face_count; ++i){
@@ -191,30 +200,19 @@ void initGroundBuffer(){
     glBindVertexArray(groundSprite.VAO);
 
     glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    glEnableVertexAttribArray(2);
     assert(glGetError() == GL_NONE);
 
     glGenBuffers(1, &groundSprite.VBO);
     glGenBuffers(1, &groundSprite.EBO);
     
     glBindBuffer(GL_ARRAY_BUFFER, groundSprite.VBO);
+    glBufferData(GL_ARRAY_BUFFER, groundSprite.vertexDataSize, groundSprite.model->positions, GL_STATIC_DRAW);
+    
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundSprite.EBO);
-
-    glBufferData(GL_ARRAY_BUFFER, groundSprite.vertexDataSize +
-                                  groundSprite.normalDataSize +
-                                  groundSprite.texCoordDataSize, 0, GL_STATIC_DRAW);
-    
-    glBufferSubData(GL_ARRAY_BUFFER, 0, groundSprite.vertexDataSize, groundSprite.model->positions);
-    glBufferSubData(GL_ARRAY_BUFFER, groundSprite.vertexDataSize, groundSprite.normalDataSize, normalData);
-    glBufferSubData(GL_ARRAY_BUFFER, groundSprite.vertexDataSize + groundSprite.normalDataSize, groundSprite.texCoordDataSize, texCoordData);
-    
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, groundSprite.indexDataSize, indexData, GL_STATIC_DRAW);
 
     // done copying; can free now
     delete[] indexData;
-    delete[] texCoordData;
-    delete[] normalData;
     fast_obj_destroy(groundSprite.model);
 }
 
