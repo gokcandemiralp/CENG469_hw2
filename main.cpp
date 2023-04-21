@@ -23,46 +23,9 @@ float yaw = -90.0f;
 float pitch = 0.0f;
 
 void initShaders(){
-    GLint status, vs, fs;
-    
-    skyBoxSprite.gProgram = glCreateProgram();
-    vs = createVS("shaders/skyboxVert.glsl");
-    fs = createFS("shaders/skyboxFrag.glsl");
-    glAttachShader(skyBoxSprite.gProgram, vs);
-    glAttachShader(skyBoxSprite.gProgram, fs);
-    glLinkProgram(skyBoxSprite.gProgram);
-    glGetProgramiv(skyBoxSprite.gProgram, GL_LINK_STATUS, &status);
-
-    if (status != GL_TRUE){
-        cout << "Program link failed for program" << skyBoxSprite.gProgram << endl;
-        exit(-1);
-    }
-    
-    groundSprite.gProgram = glCreateProgram();
-    vs = createVS("shaders/groundVert.glsl");
-    fs = createFS("shaders/groundFrag.glsl");
-    glAttachShader(groundSprite.gProgram, vs);
-    glAttachShader(groundSprite.gProgram, fs);
-    glLinkProgram(groundSprite.gProgram);
-    glGetProgramiv(groundSprite.gProgram, GL_LINK_STATUS, &status);
-
-    if (status != GL_TRUE){
-        cout << "Program link failed for program" << groundSprite.gProgram << endl;
-        exit(-1);
-    }
-    
-    statueSprite.gProgram = glCreateProgram();
-    vs = createVS("shaders/statueVert.glsl");
-    fs = createFS("shaders/statueFrag.glsl");
-    glAttachShader(statueSprite.gProgram, vs);
-    glAttachShader(statueSprite.gProgram, fs);
-    glLinkProgram(statueSprite.gProgram);
-    glGetProgramiv(statueSprite.gProgram, GL_LINK_STATUS, &status);
-
-    if (status != GL_TRUE){
-        cout << "Program link failed for program" << statueSprite.gProgram << endl;
-        exit(-1);
-    }
+    initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl",skyBoxSprite,projectionMatrix);
+    initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl",groundSprite,projectionMatrix);
+    initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl",statueSprite,projectionMatrix);
 }
 
 void writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
@@ -77,6 +40,7 @@ void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordInd
 }
 
 void initSkyBoxBuffer(){
+    skyBoxSprite.model = fast_obj_read("objects/cube.obj");
     int vertexEntries, faceEntries;
     
     vertexEntries = skyBoxSprite.model->position_count * 3;
@@ -160,6 +124,7 @@ void initSkyBoxBuffer(){
 }
 
 void initGroundBuffer(){
+    groundSprite.model = fast_obj_read("objects/ground.obj");
     int vertexEntries, texCoordEntries, faceEntries;
     
     glGenTextures(1, &groundSprite.textureID);
@@ -220,23 +185,14 @@ void initWindowShape(){
     glViewport(0, 0, gWidth, gHeight);
     float fovyRad = (float)(45.0 / 180.0) * M_PI;
     projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
-    
-    glUseProgram(skyBoxSprite.gProgram);
-    glUniformMatrix4fv(glGetUniformLocation(skyBoxSprite.gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
-    
-    glUseProgram(groundSprite.gProgram);
-    glUniformMatrix4fv(glGetUniformLocation(groundSprite.gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 }
 
 void init(){
-    skyBoxSprite.model = fast_obj_read("objects/cube.obj");
-    groundSprite.model = fast_obj_read("objects/ground.obj");
-
     glEnable(GL_DEPTH_TEST);
+    initWindowShape();
     initShaders();
     initSkyBoxBuffer();
     initGroundBuffer();
-    initWindowShape();
 }
 
 void renderSkyBox(){
@@ -272,8 +228,6 @@ void renderGround(){
     
     glBindVertexArray(groundSprite.VAO);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(groundSprite.vertexDataSize));
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(groundSprite.vertexDataSize + groundSprite.normalDataSize));
 
     glDrawElements(GL_TRIANGLES, 6 , GL_UNSIGNED_INT, 0);
 }

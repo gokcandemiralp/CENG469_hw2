@@ -72,19 +72,6 @@ struct Face{
     GLuint vIndex[3], tIndex[3], nIndex[3];
 };
 
-struct tinyObj{
-    attrib_t                attrib;
-    std::vector<shape_t>    shapes;
-    std::vector<material_t> materials;
-};
-
-static
-bool read_tiny_obj(const char* path, tinyObj* o){
-    std::string err;
-    std::string warn;
-    return LoadObj(&o->attrib, &o->shapes, &o->materials, &warn, &err, path, 0, false);
-}
-
 bool ReadDataFromFile(
     const string& fileName, ///< [in]  Name of the shader file
           string& data){     ///< [out] The contents of the file
@@ -154,6 +141,25 @@ GLuint createFS(const char* shaderName){
     if(strcmp(output,"")){printf("FS compile log: %s\n", output);}
 
     return fs;
+}
+
+void initShader(string vsFile, string fsFile, spriteInfo &sprite, glm::mat4 &projectionMatrix){
+    GLint status, vs, fs;
+    
+    sprite.gProgram = glCreateProgram();
+    vs = createVS(vsFile.c_str());
+    fs = createFS(fsFile.c_str());
+    glAttachShader(sprite.gProgram, vs);
+    glAttachShader(sprite.gProgram, fs);
+    glLinkProgram(sprite.gProgram);
+    glGetProgramiv(sprite.gProgram, GL_LINK_STATUS, &status);
+    glUseProgram(sprite.gProgram);
+    glUniformMatrix4fv(glGetUniformLocation(sprite.gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+
+    if (status != GL_TRUE){
+        cout << "Program link failed for program" << sprite.gProgram << endl;
+        exit(-1);
+    }
 }
 
 
