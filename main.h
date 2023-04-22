@@ -196,17 +196,11 @@ struct Sprite{
         GLuint* indexData = new GLuint[faceEntries];
         
         for (int i = 0; i < model->face_count; ++i){
-            indexData[3 * i] = model->indices[3 * i].p;
-            indexData[3 * i + 1] = model->indices[3 * i + 1].p;
-            indexData[3 * i + 2] = model->indices[3 * i + 2].p;
-            
-            this->writeVertexNormal(normalData, model->indices[3 * i].p,model->indices[3 * i].n);
-            this->writeVertexNormal(normalData, model->indices[3 * i + 1].p,model->indices[3 * i + 1].n);
-            this->writeVertexNormal(normalData, model->indices[3 * i + 2].p,model->indices[3 * i + 2].n);
-            
-            this->writeVertexTexCoord(texCoordData, model->indices[3 * i].p,model->indices[3 * i].t);
-            this->writeVertexTexCoord(texCoordData, model->indices[3 * i + 1].p,model->indices[3 * i + 1].t);
-            this->writeVertexTexCoord(texCoordData, model->indices[3 * i + 2].p,model->indices[3 * i + 2].t);
+            for(int j = 0 ; j < 3 ; ++j) {
+                indexData[3 * i + j] = model->indices[3 * i + j].p;
+                writeVertexNormal(normalData, model->indices[3 * i + j].p,model->indices[3 * i + j].n);
+                writeVertexTexCoord(texCoordData, model->indices[3 * i  + j].p,model->indices[3 * i + j].t);
+            }
         }
 
         glGenVertexArrays(1, &VAO);
@@ -310,8 +304,8 @@ struct Sprite{
         fast_obj_destroy(model);
     }
     
-    void render(glm::vec3 movementOffset, glm::mat4 &projectionMatrix, glm::mat4 &viewingMatrix){
-        glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(1.0f ,1.0f ,1.0f));
+    void render(float scaleFactor, glm::vec3 movementOffset, glm::mat4 &projectionMatrix, glm::mat4 &viewingMatrix){
+        glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
         glm::mat4 matT = glm::translate(glm::mat4(1.0f), movementOffset);
         glm::mat4 modelingMatrix = matT * matS;
         glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);

@@ -155,7 +155,7 @@ void display(){
     viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
     renderSkyBox();
     renderGround();
-    characterSprite.render(movementOffset, projectionMatrix, viewingMatrix);
+    characterSprite.render(3.0f, movementOffset, projectionMatrix, viewingMatrix);
 }
 
 void movementKeys(GLFWwindow* window){
