@@ -1,8 +1,8 @@
 #include "main.h"
 
-spriteInfo skyBoxSprite;
-spriteInfo groundSprite;
-spriteInfo statueSprite;
+Sprite skyBoxSprite;
+Sprite groundSprite;
+Sprite statueSprite = Sprite("objects/bunny.obj","textures/rainbow.png");;
 
 int gWidth = 800, gHeight = 450;
 glm::mat4 projectionMatrix;
@@ -26,17 +26,6 @@ void initShaders(){
     initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl",skyBoxSprite,projectionMatrix);
     initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl",groundSprite,projectionMatrix);
     initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl",statueSprite,projectionMatrix);
-}
-
-void writeVertexNormal(spriteInfo &sprite, GLfloat* normalData, int vertexIndex, int normalIndex){
-    normalData[3 * vertexIndex] = sprite.model->normals[3 * normalIndex];
-    normalData[3 * vertexIndex + 1] = sprite.model->normals[3 * normalIndex + 1];
-    normalData[3 * vertexIndex + 2] = sprite.model->normals[3 * normalIndex + 2];
-}
-
-void writeVertexTexCoord(spriteInfo &sprite, GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
-    texCoordData[2 * vertexIndex] = sprite.model->texcoords[2 * texCoordIndex];
-    texCoordData[2 * vertexIndex + 1] = 1.0f - sprite.model->texcoords[2 * texCoordIndex + 1];
 }
 
 void initSkyBoxBuffer(){
@@ -83,7 +72,6 @@ void initSkyBoxBuffer(){
 
     // Creates the cubemap texture object
     glGenTextures(1, &skyBoxSprite.textureID);
-    cout << "skyBoxSprite.textureID:" << skyBoxSprite.textureID << "\n";
     glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxSprite.textureID);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -129,7 +117,6 @@ void initGroundBuffer(){
     int vertexEntries, texCoordEntries, faceEntries;
     
     glGenTextures(1, &groundSprite.textureID);
-    cout << "groundSprite.textureID:" << groundSprite.textureID << "\n";
     glBindTexture(GL_TEXTURE_2D, groundSprite.textureID);
     
     // set the texture wrapping/filtering options (on the currently bound texture object)
@@ -181,78 +168,6 @@ void initGroundBuffer(){
     // done copying; can free now
     delete[] indexData;
     fast_obj_destroy(groundSprite.model);
-}
-
-void initStatueBuffer(){
-    statueSprite.model = fast_obj_read("objects/bunny.obj");
-    
-    glGenTextures(1, &statueSprite.textureID);
-    cout << "statueSprite.textureID:" << statueSprite.textureID << "\n";
-    glBindTexture(GL_TEXTURE_2D, statueSprite.textureID);
-    
-    // set the texture wrapping/filtering options (on the currently bound texture object)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load and generate the texture
-    int width, height, nrChannels;
-    unsigned char *data = stbi_load("textures/rainbow.png", &width, &height, &nrChannels, 0);
-    if (data){
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else{
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    
-    stbi_image_free(data);
-    
-    statueSprite.vertexEntries = statueSprite.model->position_count * 3;
-    statueSprite.faceEntries = statueSprite.model->face_count * 3;
-    
-    statueSprite.vertexDataSize = statueSprite.vertexEntries * sizeof(GLfloat);
-    statueSprite.normalDataSize = statueSprite.vertexEntries * sizeof(GLfloat);
-    statueSprite.indexDataSize = statueSprite.faceEntries * sizeof(GLuint);
-    GLfloat* normalData = new GLfloat[statueSprite.vertexEntries];
-    GLuint* indexData = new GLuint[statueSprite.faceEntries];
-    
-    for (int i = 0; i < statueSprite.model->face_count; ++i){
-        indexData[3 * i] = statueSprite.model->indices[3 * i].p;
-        indexData[3 * i + 1] = statueSprite.model->indices[3 * i + 1].p;
-        indexData[3 * i + 2] = statueSprite.model->indices[3 * i + 2].p;
-        
-        writeVertexNormal(statueSprite, normalData, statueSprite.model->indices[3 * i].p,
-                          statueSprite.model->indices[3 * i].n);
-        writeVertexNormal(statueSprite ,normalData, statueSprite.model->indices[3 * i + 1].p,
-                          statueSprite.model->indices[3 * i + 1].n);
-        writeVertexNormal(statueSprite, normalData, statueSprite.model->indices[3 * i + 2].p,
-                          statueSprite.model->indices[3 * i + 2].n);
-    }
-
-    glGenVertexArrays(1, &statueSprite.VAO);
-    glBindVertexArray(statueSprite.VAO);
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(1);
-    assert(glGetError() == GL_NONE);
-
-    glGenBuffers(1, &statueSprite.VBO);
-    glGenBuffers(1, &statueSprite.EBO);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, statueSprite.VBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, statueSprite.EBO);
-    
-    glBufferData(GL_ARRAY_BUFFER, statueSprite.vertexDataSize + statueSprite.normalDataSize, 0, GL_STATIC_DRAW);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, statueSprite.vertexDataSize, statueSprite.model->positions);
-    glBufferSubData(GL_ARRAY_BUFFER, statueSprite.vertexDataSize, statueSprite.normalDataSize, normalData);
-    
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, statueSprite.indexDataSize, indexData, GL_STATIC_DRAW);
-
-    // done copying; can free now
-    delete[] normalData;
-    delete[] indexData;
-    fast_obj_destroy(statueSprite.model);
 }
 
 void initWindowShape(){
@@ -327,7 +242,7 @@ void init(){
     initShaders();
     initSkyBoxBuffer();
     initGroundBuffer();
-    initStatueBuffer();
+    statueSprite.initBuffer();
 }
 
 void display(){

@@ -36,11 +36,102 @@ using namespace tinyobj;
 #define CHECK(_c) check(_c, #_c)
 #define VERTEX_PER_FACE 4
 
-struct spriteInfo{
-    GLuint gProgram, VAO, VBO, EBO, textureID;
-    GLuint vertexDataSize, normalDataSize, indexDataSize, texCoordDataSize;
-    GLuint vertexEntries, faceEntries;
-    fastObjMesh* model;
+struct Sprite{
+    public:
+        string objDir;
+        string texDir;
+        GLuint gProgram, VAO, VBO, EBO, textureID;
+        GLuint vertexDataSize, normalDataSize, indexDataSize, texCoordDataSize;
+        GLuint vertexEntries, faceEntries;
+        fastObjMesh* model;
+    
+    Sprite() {
+        ;
+    }
+    
+    Sprite(string inputObjDir, string inputTexDir) {
+        objDir = inputObjDir;
+        texDir = inputTexDir;
+    }
+
+    void writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
+        normalData[3 * vertexIndex] = model->normals[3 * normalIndex];
+        normalData[3 * vertexIndex + 1] = model->normals[3 * normalIndex + 1];
+        normalData[3 * vertexIndex + 2] = model->normals[3 * normalIndex + 2];
+    }
+
+    void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
+        texCoordData[2 * vertexIndex] = model->texcoords[2 * texCoordIndex];
+        texCoordData[2 * vertexIndex + 1] = 1.0f - model->texcoords[2 * texCoordIndex + 1];
+    }
+    
+    void initBuffer(){
+        model = fast_obj_read(objDir.c_str());
+        
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        
+        // set the texture wrapping/filtering options (on the currently bound texture object)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // load and generate the texture
+        int width, height, nrChannels;
+        unsigned char *data = stbi_load(texDir.c_str(), &width, &height, &nrChannels, 0);
+        if (data){
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+        else{
+            std::cout << "Failed to load texture" << std::endl;
+        }
+        
+        stbi_image_free(data);
+        
+        vertexEntries = model->position_count * 3;
+        faceEntries = model->face_count * 3;
+        
+        vertexDataSize = vertexEntries * sizeof(GLfloat);
+        normalDataSize = vertexEntries * sizeof(GLfloat);
+        indexDataSize = faceEntries * sizeof(GLuint);
+        GLfloat* normalData = new GLfloat[vertexEntries];
+        GLuint* indexData = new GLuint[faceEntries];
+        
+        for (int i = 0; i < model->face_count; ++i){
+            indexData[3 * i] = model->indices[3 * i].p;
+            indexData[3 * i + 1] = model->indices[3 * i + 1].p;
+            indexData[3 * i + 2] = model->indices[3 * i + 2].p;
+            
+            this->writeVertexNormal(normalData, model->indices[3 * i].p,model->indices[3 * i].n);
+            this->writeVertexNormal(normalData, model->indices[3 * i + 1].p,model->indices[3 * i + 1].n);
+            this->writeVertexNormal(normalData, model->indices[3 * i + 2].p,model->indices[3 * i + 2].n);
+        }
+
+        glGenVertexArrays(1, &VAO);
+        glBindVertexArray(VAO);
+
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+        assert(glGetError() == GL_NONE);
+
+        glGenBuffers(1, &VBO);
+        glGenBuffers(1, &EBO);
+        
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        
+        glBufferData(GL_ARRAY_BUFFER, vertexDataSize + normalDataSize, 0, GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, vertexDataSize, model->positions);
+        glBufferSubData(GL_ARRAY_BUFFER, vertexDataSize, normalDataSize, normalData);
+        
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSize, indexData, GL_STATIC_DRAW);
+
+        // done copying; can free now
+        delete[] normalData;
+        delete[] indexData;
+        fast_obj_destroy(model);
+    }
 };
 
 struct Vertex{
@@ -144,7 +235,7 @@ GLuint createFS(const char* shaderName){
     return fs;
 }
 
-void initShader(string vsFile, string fsFile, spriteInfo &sprite, glm::mat4 &projectionMatrix){
+void initShader(string vsFile, string fsFile, Sprite &sprite, glm::mat4 &projectionMatrix){
     GLint status, vs, fs;
     
     sprite.gProgram = glCreateProgram();
