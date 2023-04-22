@@ -132,6 +132,28 @@ struct Sprite{
         delete[] indexData;
         fast_obj_destroy(model);
     }
+    
+    void render(glm::mat4 &viewingMatrix){
+        glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(1.0f ,1.0f ,1.0f));
+        glm::mat4 matT = glm::translate(glm::mat4(1.0f), glm::vec3(1.0f ,1.0f ,1.0f));
+        glm::mat4 modelingMatrix = matT * matS;
+        glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);
+        
+        glUseProgram(gProgram);
+        glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually
+        glUniformMatrix4fv(glGetUniformLocation(gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
+        glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
+        glUniform3fv(glGetUniformLocation(gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
+        
+        glBindVertexArray(VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(vertexDataSize));
+        glDrawElements(GL_TRIANGLES, faceEntries , GL_UNSIGNED_INT, 0);
+    }
 };
 
 struct Vertex{

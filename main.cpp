@@ -249,7 +249,7 @@ void display(){
     viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
     renderSkyBox();
     renderGround();
-    renderStatue();
+    statueSprite.render(viewingMatrix);
 }
 
 void movementKeys(GLFWwindow* window){
