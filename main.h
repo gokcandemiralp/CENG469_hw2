@@ -33,17 +33,89 @@ using namespace std;
 using namespace tinyobj;
 
 #define BUFFER_OFFSET(i) ((char*)NULL + (i))
-#define CHECK(_c) check(_c, #_c)
-#define VERTEX_PER_FACE 4
+
+bool ReadDataFromFile(
+    const string& fileName, ///< [in]  Name of the shader file
+          string& data){     ///< [out] The contents of the file
+    fstream myfile;
+
+    myfile.open(fileName.c_str(), std::ios::in); // Open the input
+
+    if (myfile.is_open()){
+        string curLine;
+
+        while (getline(myfile, curLine)){
+            data += curLine;
+            if (!myfile.eof()){
+                data += "\n";
+            }
+        }
+
+        myfile.close();
+    }
+    else{
+        return false;
+    }
+    return true;
+}
+
+
+GLuint createVS(const char* shaderName){
+    string shaderSource;
+
+    string filename(shaderName);
+    if (!ReadDataFromFile(filename, shaderSource)){
+        cout << "Cannot find file name: " + filename << endl;
+        exit(-1);
+    }
+
+    GLint length = (GLint)shaderSource.length();
+    const GLchar* shader = (const GLchar*)shaderSource.c_str();
+
+    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vs, 1, &shader, &length);
+    glCompileShader(vs);
+
+    char output[1024] = { 0 };
+    glGetShaderInfoLog(vs, 1024, &length, output);
+    if(strcmp(output,"")){printf("VS compile log: %s\n", output);}
+
+    return vs;
+}
+
+GLuint createFS(const char* shaderName){
+    string shaderSource;
+
+    string filename(shaderName);
+    if (!ReadDataFromFile(filename, shaderSource)){
+        cout << "Cannot find file name: " + filename << endl;
+        exit(-1);
+    }
+
+    GLint length = (GLint)shaderSource.length();
+    const GLchar* shader = (const GLchar*)shaderSource.c_str();
+
+    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fs, 1, &shader, &length);
+    glCompileShader(fs);
+
+    char output[1024] = { 0 };
+    glGetShaderInfoLog(fs, 1024, &length, output);
+    if(strcmp(output,"")){printf("FS compile log: %s\n", output);}
+
+    return fs;
+}
 
 struct Sprite{
     public:
         string objDir;
         string texDir;
+        string cubeMapDirs[6];
         GLuint gProgram, VAO, VBO, EBO, textureID;
         GLuint vertexDataSize, normalDataSize, indexDataSize, texCoordDataSize;
         GLuint vertexEntries, faceEntries;
         fastObjMesh* model;
+        
     
     Sprite() {
         ;
@@ -52,6 +124,12 @@ struct Sprite{
     Sprite(string inputObjDir, string inputTexDir) {
         objDir = inputObjDir;
         texDir = inputTexDir;
+    }
+    Sprite(string inputObjDir, string inputCubeTexDirs[6]) {
+        objDir = inputObjDir;
+        for(int i = 0 ; i < 6 ; ++i){
+            cubeMapDirs[i] = inputCubeTexDirs[i];
+        }
     }
 
     void writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
@@ -63,6 +141,23 @@ struct Sprite{
     void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
         texCoordData[2 * vertexIndex] = model->texcoords[2 * texCoordIndex];
         texCoordData[2 * vertexIndex + 1] = 1.0f - model->texcoords[2 * texCoordIndex + 1];
+    }
+    
+    void initShader(string vertDir, string fragDir){
+        GLint status, vs, fs;
+        
+        gProgram = glCreateProgram();
+        vs = createVS(vertDir.c_str());
+        fs = createFS(fragDir.c_str());
+        glAttachShader(gProgram, vs);
+        glAttachShader(gProgram, fs);
+        glLinkProgram(gProgram);
+        glGetProgramiv(gProgram, GL_LINK_STATUS, &status);
+
+        if (status != GL_TRUE){
+            cout << "Program link failed for program" << gProgram << endl;
+            exit(-1);
+        }
     }
     
     void initBuffer(){
@@ -133,7 +228,80 @@ struct Sprite{
         fast_obj_destroy(model);
     }
     
-    void render(glm::vec3 &movementOffset, glm::mat4 &viewingMatrix){
+    void initSkyBoxBuffer(){
+        model = fast_obj_read(objDir.c_str());
+        int vertexEntries, faceEntries;
+        
+        vertexEntries = model->position_count * 3;
+        faceEntries = model->face_count * 3;
+        
+        vertexDataSize = vertexEntries * sizeof(GLfloat);
+        indexDataSize = faceEntries * sizeof(GLuint);
+        GLuint* indexData = new GLuint[faceEntries];
+        
+        for (int i = 0; i < model->face_count; ++i){
+            indexData[3 * i] = model->indices[3 * i].p;
+            indexData[3 * i + 1] = model->indices[3 * i + 1].p;
+            indexData[3 * i + 2] = model->indices[3 * i + 2].p;
+        }
+
+        glGenVertexArrays(1, &VAO);
+        glGenBuffers(1, &VBO);
+        glGenBuffers(1, &EBO);
+        
+        glBindVertexArray(VAO);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO);
+        glBufferData(GL_ARRAY_BUFFER, vertexDataSize, model->positions, GL_STATIC_DRAW);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSize, indexData, GL_STATIC_DRAW);
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(0);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        glBindVertexArray(0);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+        // Creates the cubemap texture object
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        // These are very important to prevent seams
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        // This might help with seams on some systems
+        //glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+
+        // Cycles through all the textures and attaches them to the cubemap object
+        for (unsigned int i = 0; i < 6; i++){
+            int width, height, nrChannels;
+            unsigned char* data = stbi_load(cubeMapDirs[i].c_str(), &width, &height, &nrChannels, 0);
+            if (data){
+                stbi_set_flip_vertically_on_load(false);
+                glTexImage2D(
+                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                    0,
+                    GL_RGB,
+                    width,
+                    height,
+                    0,
+                    GL_RGB,
+                    GL_UNSIGNED_BYTE,
+                    data
+                );
+                stbi_image_free(data);
+            }
+            else{
+                std::cout << "Failed to load texture: " << cubeMapDirs[i] << std::endl;
+                stbi_image_free(data);
+            }
+        }
+
+        // done copying; can free now
+        delete[] indexData;
+        fast_obj_destroy(model);
+    }
+    
+    void render(glm::vec3 movementOffset, glm::mat4 &projectionMatrix, glm::mat4 &viewingMatrix){
         glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(1.0f ,1.0f ,1.0f));
         glm::mat4 matT = glm::translate(glm::mat4(1.0f), movementOffset);
         glm::mat4 modelingMatrix = matT * matS;
@@ -141,6 +309,7 @@ struct Sprite{
         
         glUseProgram(gProgram);
         glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually
+        glUniformMatrix4fv(glGetUniformLocation(gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
         glUniform3fv(glGetUniformLocation(gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
@@ -155,107 +324,6 @@ struct Sprite{
         glDrawElements(GL_TRIANGLES, faceEntries , GL_UNSIGNED_INT, 0);
     }
 };
-
-struct Vertex{
-    Vertex(GLfloat inX, GLfloat inY, GLfloat inZ) : x(inX), y(inY), z(inZ) { }
-    GLfloat x, y, z;
-};
-
-struct Texture{
-    Texture(GLfloat inU, GLfloat inV) : u(inU), v(inV) { }
-    GLfloat u, v;
-};
-
-struct Normal{
-    Normal(GLfloat inX, GLfloat inY, GLfloat inZ) : x(inX), y(inY), z(inZ) { }
-    GLfloat x, y, z;
-};
-
-struct Face{
-    Face(int v[], int t[], int n[]) {
-        vIndex[0] = v[0];
-        vIndex[1] = v[1];
-        vIndex[2] = v[2];
-        tIndex[0] = t[0];
-        tIndex[1] = t[1];
-        tIndex[2] = t[2];
-        nIndex[0] = n[0];
-        nIndex[1] = n[1];
-        nIndex[2] = n[2];
-    }
-    GLuint vIndex[3], tIndex[3], nIndex[3];
-};
-
-bool ReadDataFromFile(
-    const string& fileName, ///< [in]  Name of the shader file
-          string& data){     ///< [out] The contents of the file
-    fstream myfile;
-
-    myfile.open(fileName.c_str(), std::ios::in); // Open the input
-
-    if (myfile.is_open()){
-        string curLine;
-
-        while (getline(myfile, curLine)){
-            data += curLine;
-            if (!myfile.eof()){
-                data += "\n";
-            }
-        }
-
-        myfile.close();
-    }
-    else{
-        return false;
-    }
-    return true;
-}
-
-GLuint createVS(const char* shaderName){
-    string shaderSource;
-
-    string filename(shaderName);
-    if (!ReadDataFromFile(filename, shaderSource)){
-        cout << "Cannot find file name: " + filename << endl;
-        exit(-1);
-    }
-
-    GLint length = (GLint)shaderSource.length();
-    const GLchar* shader = (const GLchar*)shaderSource.c_str();
-
-    GLuint vs = glCreateShader(GL_VERTEX_SHADER);
-    glShaderSource(vs, 1, &shader, &length);
-    glCompileShader(vs);
-
-    char output[1024] = { 0 };
-    glGetShaderInfoLog(vs, 1024, &length, output);
-    if(strcmp(output,"")){printf("VS compile log: %s\n", output);}
-
-    return vs;
-}
-
-GLuint createFS(const char* shaderName){
-    string shaderSource;
-
-    string filename(shaderName);
-    if (!ReadDataFromFile(filename, shaderSource)){
-        cout << "Cannot find file name: " + filename << endl;
-        exit(-1);
-    }
-
-    GLint length = (GLint)shaderSource.length();
-    const GLchar* shader = (const GLchar*)shaderSource.c_str();
-
-    GLuint fs = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(fs, 1, &shader, &length);
-    glCompileShader(fs);
-
-    char output[1024] = { 0 };
-    glGetShaderInfoLog(fs, 1024, &length, output);
-    if(strcmp(output,"")){printf("FS compile log: %s\n", output);}
-
-    return fs;
-}
 
 void initShader(string vsFile, string fsFile, Sprite &sprite, glm::mat4 &projectionMatrix){
     GLint status, vs, fs;
