@@ -20,6 +20,7 @@ uniform vec3 eyePos;
 
 layout(location=0) in vec3 inVertex;
 layout(location=1) in vec3 inNormal;
+layout(location=2) in vec2 inTexCoord;
 
 out vec4 color;
 out vec2 TexCoord;
@@ -42,7 +43,7 @@ void main(void)
     vec3 ambientColor = Iamb * ka;
 
     color = vec4(diffuseColor + specularColor + ambientColor, 1);
-    TexCoord = vec2(inVertex.x, inVertex.z);
+    TexCoord = inTexCoord;
 
     gl_Position = projectionMatrix * viewingMatrix * modelingMatrix * vec4(inVertex, 1);
 }

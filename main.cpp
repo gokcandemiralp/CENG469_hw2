@@ -12,10 +12,8 @@ string cubeMapDirs[6] ={
 Sprite skyBoxSprite("objects/cube.obj",cubeMapDirs);;
 Sprite groundSprite = Sprite("objects/ground.obj",
                              "textures/water.jpeg");
-Sprite statueSprite = Sprite("objects/cybertruck_body.obj",
-                             "textures/rainbow.png");
-Sprite statue2Sprite = Sprite("objects/cybertruck_windows.obj",
-                              "textures/rainbow.png");
+Sprite characterSprite = Sprite("objects/Yatch_ps.obj",
+                              "textures/Yatch_DIF.png");
 
 int gWidth = 800, gHeight = 450;
 glm::mat4 projectionMatrix;
@@ -138,32 +136,10 @@ void renderGround(){
     glDrawElements(GL_TRIANGLES, 6 , GL_UNSIGNED_INT, 0);
 }
 
-void renderStatue(){
-    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(1.0f ,1.0f ,1.0f));
-    glm::mat4 matT = glm::translate(glm::mat4(1.0), movementOffset);
-    glm::mat4 modelingMatrix = matT * matS;
-    
-    glUseProgram(statueSprite.gProgram);
-    glUniform1i(glGetUniformLocation(statueSprite.gProgram, "ground"), 0); // set it manually
-    glUniformMatrix4fv(glGetUniformLocation(statueSprite.gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
-    glUniformMatrix4fv(glGetUniformLocation(statueSprite.gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
-    glUniform3fv(glGetUniformLocation(statueSprite.gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
-    
-    glBindVertexArray(statueSprite.VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, statueSprite.VBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, statueSprite.EBO);
-    glBindTexture(GL_TEXTURE_2D, statueSprite.textureID);
-    
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(statueSprite.vertexDataSize));
-    glDrawElements(GL_TRIANGLES, statueSprite.faceEntries , GL_UNSIGNED_INT, 0);
-}
-
 void initShaders(){
     initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl",skyBoxSprite,projectionMatrix);
     initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl",groundSprite,projectionMatrix);
-    statueSprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
-    statue2Sprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
+    characterSprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
 }
 
 void init(){
@@ -172,16 +148,14 @@ void init(){
     initShaders();
     skyBoxSprite.initSkyBoxBuffer();
     initGroundBuffer();
-    statueSprite.initBuffer();
-    statue2Sprite.initBuffer();
+    characterSprite.initBuffer();
 }
 
 void display(){
     viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
     renderSkyBox();
     renderGround();
-    statueSprite.render(movementOffset, projectionMatrix, viewingMatrix);
-    statue2Sprite.render(movementOffset, projectionMatrix, viewingMatrix);
+    characterSprite.render(movementOffset, projectionMatrix, viewingMatrix);
 }
 
 void movementKeys(GLFWwindow* window){

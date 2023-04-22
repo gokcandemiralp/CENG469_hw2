@@ -8,6 +8,6 @@ in vec4 color;
 uniform sampler2D sampler;
 
 void main(void){
-    fragColor = color;
-    // fragColor = texture(sampler, TexCoord);
+    // fragColor = color;
+    fragColor = texture(sampler, TexCoord);
 }

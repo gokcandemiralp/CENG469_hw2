@@ -189,8 +189,10 @@ struct Sprite{
         
         vertexDataSize = vertexEntries * sizeof(GLfloat);
         normalDataSize = vertexEntries * sizeof(GLfloat);
+        texCoordDataSize = vertexEntries * sizeof(GLfloat);
         indexDataSize = faceEntries * sizeof(GLuint);
         GLfloat* normalData = new GLfloat[vertexEntries];
+        GLfloat* texCoordData = new GLfloat[texCoordDataSize];
         GLuint* indexData = new GLuint[faceEntries];
         
         for (int i = 0; i < model->face_count; ++i){
@@ -201,6 +203,10 @@ struct Sprite{
             this->writeVertexNormal(normalData, model->indices[3 * i].p,model->indices[3 * i].n);
             this->writeVertexNormal(normalData, model->indices[3 * i + 1].p,model->indices[3 * i + 1].n);
             this->writeVertexNormal(normalData, model->indices[3 * i + 2].p,model->indices[3 * i + 2].n);
+            
+            this->writeVertexTexCoord(texCoordData, model->indices[3 * i].p,model->indices[3 * i].t);
+            this->writeVertexTexCoord(texCoordData, model->indices[3 * i + 1].p,model->indices[3 * i + 1].t);
+            this->writeVertexTexCoord(texCoordData, model->indices[3 * i + 2].p,model->indices[3 * i + 2].t);
         }
 
         glGenVertexArrays(1, &VAO);
@@ -208,6 +214,7 @@ struct Sprite{
 
         glEnableVertexAttribArray(0);
         glEnableVertexAttribArray(1);
+        glEnableVertexAttribArray(2);
         assert(glGetError() == GL_NONE);
 
         glGenBuffers(1, &VBO);
@@ -216,14 +223,16 @@ struct Sprite{
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
         
-        glBufferData(GL_ARRAY_BUFFER, vertexDataSize + normalDataSize, 0, GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, vertexDataSize + normalDataSize + texCoordDataSize, 0, GL_STATIC_DRAW);
         glBufferSubData(GL_ARRAY_BUFFER, 0, vertexDataSize, model->positions);
         glBufferSubData(GL_ARRAY_BUFFER, vertexDataSize, normalDataSize, normalData);
+        glBufferSubData(GL_ARRAY_BUFFER, vertexDataSize + normalDataSize, texCoordDataSize, texCoordData);
         
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSize, indexData, GL_STATIC_DRAW);
 
         // done copying; can free now
         delete[] normalData;
+        delete[] texCoordData;
         delete[] indexData;
         fast_obj_destroy(model);
     }
@@ -321,6 +330,7 @@ struct Sprite{
         
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(vertexDataSize));
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(vertexDataSize + normalDataSize));
         glDrawElements(GL_TRIANGLES, faceEntries , GL_UNSIGNED_INT, 0);
     }
 };
