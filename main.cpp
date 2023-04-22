@@ -2,7 +2,8 @@
 
 Sprite skyBoxSprite;
 Sprite groundSprite;
-Sprite statueSprite = Sprite("objects/bunny.obj","textures/rainbow.png");;
+Sprite statueSprite = Sprite("objects/cybertruck_body.obj","textures/rainbow.png");
+Sprite statue2Sprite = Sprite("objects/cybertruck_windows.obj","textures/rainbow.png");
 
 int gWidth = 800, gHeight = 450;
 glm::mat4 projectionMatrix;
@@ -26,6 +27,7 @@ void initShaders(){
     initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl",skyBoxSprite,projectionMatrix);
     initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl",groundSprite,projectionMatrix);
     initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl",statueSprite,projectionMatrix);
+    initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl",statue2Sprite,projectionMatrix);
 }
 
 void initSkyBoxBuffer(){
@@ -243,13 +245,15 @@ void init(){
     initSkyBoxBuffer();
     initGroundBuffer();
     statueSprite.initBuffer();
+    statue2Sprite.initBuffer();
 }
 
 void display(){
     viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
     renderSkyBox();
     renderGround();
-    statueSprite.render(viewingMatrix);
+    statueSprite.render(movementOffset, viewingMatrix);
+    statue2Sprite.render(movementOffset, viewingMatrix);
 }
 
 void movementKeys(GLFWwindow* window){

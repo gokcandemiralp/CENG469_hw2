@@ -133,9 +133,9 @@ struct Sprite{
         fast_obj_destroy(model);
     }
     
-    void render(glm::mat4 &viewingMatrix){
+    void render(glm::vec3 &movementOffset, glm::mat4 &viewingMatrix){
         glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(1.0f ,1.0f ,1.0f));
-        glm::mat4 matT = glm::translate(glm::mat4(1.0f), glm::vec3(1.0f ,1.0f ,1.0f));
+        glm::mat4 matT = glm::translate(glm::mat4(1.0f), movementOffset);
         glm::mat4 modelingMatrix = matT * matS;
         glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);
         
