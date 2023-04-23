@@ -35,64 +35,6 @@ const float sensitivity = 0.1f;
 float yaw = -90.0f;
 float pitch = 0.0f;
 
-void initGroundBuffer(){
-    groundSprite.model = fast_obj_read("objects/ground.obj");
-    int vertexEntries, faceEntries;
-    
-    glGenTextures(1, &groundSprite.textureID);
-    glBindTexture(GL_TEXTURE_2D, groundSprite.textureID);
-    
-    // set the texture wrapping/filtering options (on the currently bound texture object)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load and generate the texture
-    int width, height, nrChannels;
-    unsigned char *data = stbi_load("textures/water.jpeg", &width, &height, &nrChannels, 0);
-    if (data){
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-    }
-    else{
-        std::cout << "Failed to load texture" << std::endl;
-    }
-    
-    stbi_image_free(data);
-    
-    vertexEntries = groundSprite.model->position_count * 3;
-    faceEntries = groundSprite.model->face_count * 3;
-    
-    groundSprite.vertexDataSize = vertexEntries * sizeof(GLfloat);
-    groundSprite.indexDataSize = faceEntries * sizeof(GLuint);
-    GLuint* indexData = new GLuint[faceEntries];
-    
-    for (int i = 0; i < groundSprite.model->face_count; ++i){
-        indexData[3 * i] = groundSprite.model->indices[3 * i].p;
-        indexData[3 * i + 1] = groundSprite.model->indices[3 * i + 1].p;
-        indexData[3 * i + 2] = groundSprite.model->indices[3 * i + 2].p;
-    }
-
-    glGenVertexArrays(1, &groundSprite.VAO);
-    glBindVertexArray(groundSprite.VAO);
-
-    glEnableVertexAttribArray(0);
-    assert(glGetError() == GL_NONE);
-
-    glGenBuffers(1, &groundSprite.VBO);
-    glGenBuffers(1, &groundSprite.EBO);
-    
-    glBindBuffer(GL_ARRAY_BUFFER, groundSprite.VBO);
-    glBufferData(GL_ARRAY_BUFFER, groundSprite.vertexDataSize, groundSprite.model->positions, GL_STATIC_DRAW);
-    
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundSprite.EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, groundSprite.indexDataSize, indexData, GL_STATIC_DRAW);
-
-    // done copying; can free now
-    delete[] indexData;
-    fast_obj_destroy(groundSprite.model);
-}
-
 void initWindowShape(){
     glViewport(0, 0, gWidth, gHeight);
     float fovyRad = (float)(45.0 / 180.0) * M_PI;
@@ -118,29 +60,9 @@ void renderSkyBox(){
     glEnable(GL_DEPTH_TEST);    // Switch the depth function back on
 }
 
-void renderGround(){
-    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(300.0f ,300.0f ,300.0f));
-    glm::mat4 matT = glm::translate(glm::mat4(1.0), movementOffset);
-    glm::mat4 modelingMatrix = matT * matS;
-    
-    glUseProgram(groundSprite.gProgram);
-    glUniform1i(glGetUniformLocation(groundSprite.gProgram, "ground"), 0); // set it manually
-    glUniformMatrix4fv(glGetUniformLocation(groundSprite.gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
-    glUniformMatrix4fv(glGetUniformLocation(groundSprite.gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
-    glUniform3fv(glGetUniformLocation(groundSprite.gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
-    
-    glBindVertexArray(groundSprite.VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, groundSprite.VBO);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, groundSprite.EBO);
-    glBindTexture(GL_TEXTURE_2D, groundSprite.textureID);
-    
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glDrawElements(GL_TRIANGLES, 6 , GL_UNSIGNED_INT, 0);
-}
-
 void initShaders(){
     initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl",skyBoxSprite,projectionMatrix);
-    initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl",groundSprite,projectionMatrix);
+    groundSprite.initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl");
     characterSprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
     buoySprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
 }
@@ -150,7 +72,7 @@ void init(){
     initWindowShape();
     initShaders();
     skyBoxSprite.initSkyBoxBuffer();
-    initGroundBuffer();
+    groundSprite.initBuffer();
     characterSprite.initBuffer();
     buoySprite.initBuffer();
 }
@@ -158,7 +80,7 @@ void init(){
 void display(){
     viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
     renderSkyBox();
-    renderGround();
+    groundSprite.render(300.0f, movementOffset, projectionMatrix, viewingMatrix);
     characterSprite.render(3.0f, movementOffset, projectionMatrix, viewingMatrix);
     buoySprite.render(0.05f, movementOffset + glm::vec3(10.0f,-0.9f,10.0f), projectionMatrix, viewingMatrix);
 }

@@ -183,7 +183,6 @@ struct Sprite{
             indexData[index] = vertexEntries/3;
             vertexEntries = vertexEntries + 3;
             texCoordEntries = texCoordEntries + 2;
-            cout << model->indices[index].p << "\n";
         }
         else{
             indexData[index] = model->indices[index].p;
@@ -239,7 +238,7 @@ struct Sprite{
         indexDataSize = faceEntries * sizeof(GLuint);
         
         vertexData  = new GLfloat[faceEntries * 3] ();
-        copy(model->positions, model->positions+vertexDataSize, vertexData);
+        memcpy(vertexData, model->positions, vertexDataSize);
         normalData = new GLfloat[faceEntries * 3] ();
         texCoordData = new GLfloat[faceEntries * 3] ();
         indexData = new GLuint[faceEntries] ();
@@ -249,7 +248,6 @@ struct Sprite{
                 addFaceElements(3 * i + j);
             }
         }
-        
         vertexDataSize = vertexEntries * sizeof(GLfloat);
         normalDataSize = vertexEntries * sizeof(GLfloat);
         texCoordDataSize = texCoordEntries * sizeof(GLfloat);
