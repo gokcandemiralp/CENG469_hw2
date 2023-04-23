@@ -115,6 +115,11 @@ struct Sprite{
         GLuint vertexDataSize, normalDataSize, indexDataSize, texCoordDataSize;
         GLuint vertexEntries, faceEntries;
         fastObjMesh* model;
+    
+    GLfloat* vertexData;
+    GLfloat* normalData;
+    GLfloat* texCoordData;
+    GLuint* indexData;
         
     
     Sprite() {
@@ -132,15 +137,44 @@ struct Sprite{
         }
     }
 
-    void writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
-        normalData[3 * vertexIndex] = model->normals[3 * normalIndex];
-        normalData[3 * vertexIndex + 1] = model->normals[3 * normalIndex + 1];
-        normalData[3 * vertexIndex + 2] = model->normals[3 * normalIndex + 2];
+    bool writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
+        if(normalData[3 * vertexIndex] == 0 &&
+           normalData[3 * vertexIndex + 1] == 0 &&
+           normalData[3 * vertexIndex + 2] == 0){
+            normalData[3 * vertexIndex] = model->normals[3 * normalIndex];
+            normalData[3 * vertexIndex + 1] = model->normals[3 * normalIndex + 1];
+            normalData[3 * vertexIndex + 2] = model->normals[3 * normalIndex + 2];
+            return false;
+        }
+        else if (normalData[3 * vertexIndex] == model->normals[3 * normalIndex] &&
+                 normalData[3 * vertexIndex + 1] == model->normals[3 * normalIndex + 1] &&
+                 normalData[3 * vertexIndex + 2] == model->normals[3 * normalIndex + 2]){
+            return false;
+        }
+        return true;
     }
 
-    void writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
-        texCoordData[2 * vertexIndex] = model->texcoords[2 * texCoordIndex];
-        texCoordData[2 * vertexIndex + 1] = 1.0f - model->texcoords[2 * texCoordIndex + 1];
+    bool writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordIndex){
+        if(texCoordData[2 * vertexIndex] == 0 && texCoordData[2 * vertexIndex + 1] == 0){
+            texCoordData[2 * vertexIndex] = model->texcoords[2 * texCoordIndex];
+            texCoordData[2 * vertexIndex + 1] = 1.0f - model->texcoords[2 * texCoordIndex + 1];
+            return false;
+        }
+        else if (texCoordData[2 * vertexIndex] == model->texcoords[2 * texCoordIndex] &&
+                 texCoordData[2 * vertexIndex + 1] == 1.0f - model->texcoords[2 * texCoordIndex + 1]){
+            return false;
+        }
+        return true;
+    }
+    
+    void addFaceElements(int index){
+        if(writeVertexNormal(normalData, model->indices[index].p,model->indices[index].n) ||
+           writeVertexTexCoord(texCoordData, model->indices[index].p,model->indices[index].t)){
+            ;
+        }
+        
+        else {cout << "possible ok situation \n" ;}
+        indexData[index] = model->indices[index].p;
     }
     
     void initShader(string vertDir, string fragDir){
@@ -191,15 +225,16 @@ struct Sprite{
         normalDataSize = vertexEntries * sizeof(GLfloat);
         texCoordDataSize = vertexEntries * sizeof(GLfloat);
         indexDataSize = faceEntries * sizeof(GLuint);
-        GLfloat* normalData = new GLfloat[vertexEntries];
-        GLfloat* texCoordData = new GLfloat[texCoordDataSize];
-        GLuint* indexData = new GLuint[faceEntries];
+        
+        vertexData  = new GLfloat[faceEntries * 3] ();
+        copy(model->positions, model->positions+vertexDataSize, vertexData);
+        normalData = new GLfloat[faceEntries * 3] ();
+        texCoordData = new GLfloat[faceEntries * 3] ();
+        indexData = new GLuint[faceEntries] ();
         
         for (int i = 0; i < model->face_count; ++i){
             for(int j = 0 ; j < 3 ; ++j) {
-                indexData[3 * i + j] = model->indices[3 * i + j].p;
-                writeVertexNormal(normalData, model->indices[3 * i + j].p,model->indices[3 * i + j].n);
-                writeVertexTexCoord(texCoordData, model->indices[3 * i  + j].p,model->indices[3 * i + j].t);
+                addFaceElements(3 * i + j);
             }
         }
 
@@ -218,13 +253,14 @@ struct Sprite{
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
         
         glBufferData(GL_ARRAY_BUFFER, vertexDataSize + normalDataSize + texCoordDataSize, 0, GL_STATIC_DRAW);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, vertexDataSize, model->positions);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, vertexDataSize, vertexData);
         glBufferSubData(GL_ARRAY_BUFFER, vertexDataSize, normalDataSize, normalData);
         glBufferSubData(GL_ARRAY_BUFFER, vertexDataSize + normalDataSize, texCoordDataSize, texCoordData);
         
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexDataSize, indexData, GL_STATIC_DRAW);
 
         // done copying; can free now
+        delete[] vertexData;
         delete[] normalData;
         delete[] texCoordData;
         delete[] indexData;
