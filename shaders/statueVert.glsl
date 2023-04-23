@@ -7,11 +7,8 @@
 // here for simplicity.
 
 vec3 I = vec3(1, 1, 1);          // point light intensity
-vec3 Iamb = vec3(0.8, 0.8, 0.8); // ambient light intensity
-vec3 kd = vec3(1, 0.2, 0.2);     // diffuse reflectance coefficient
-vec3 ka = vec3(0.3, 0.3, 0.3);   // ambient reflectance coefficient
-vec3 ks = vec3(0.8, 0.8, 0.8);   // specular reflectance coefficient
-vec3 lightPos = vec3(4, 4, 4);   // light position in world coordinates
+vec3 ks = vec3(1, 1, 0.95);   // specular reflectance coefficient
+vec3 lightPos = vec3(-4, 4, 4);   // light position in world coordinates
 
 uniform mat4 modelingMatrix;
 uniform mat4 viewingMatrix;
@@ -23,6 +20,7 @@ layout(location=1) in vec3 inNormal;
 layout(location=2) in vec2 inTexCoord;
 
 out vec4 color;
+out vec3 normal;
 out vec2 TexCoord;
 
 void main(void)
@@ -40,6 +38,7 @@ void main(void)
     vec3 specularColor = I * ks * pow(max(0, NdotH), 100);
 
     color = vec4(specularColor, 1);
+    normal = inNormal;
     TexCoord = inTexCoord;
 
     gl_Position = projectionMatrix * viewingMatrix * modelingMatrix * vec4(inVertex, 1);

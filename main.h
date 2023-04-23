@@ -173,9 +173,11 @@ struct Sprite{
             vertexData[vertexEntries] = vertexData[3 * model->indices[index].p];
             vertexData[vertexEntries + 1] = vertexData[3 * model->indices[index].p + 1];
             vertexData[vertexEntries + 2] = vertexData[3 * model->indices[index].p + 2];
+            
             normalData[vertexEntries] = model->normals[3 * model->indices[index].n];
             normalData[vertexEntries + 1] = model->normals[3 * model->indices[index].n + 1];
             normalData[vertexEntries + 2] = model->normals[3 * model->indices[index].n + 2];
+            
             texCoordData[texCoordEntries] = model->texcoords[2 * model->indices[index].t];
             texCoordData[texCoordEntries + 1] = 1.0f - model->texcoords[2 * model->indices[index].t + 1];
             indexData[index] = vertexEntries/3;

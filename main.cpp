@@ -14,6 +14,8 @@ Sprite groundSprite = Sprite("objects/ground.obj",
                              "textures/water.jpeg");
 Sprite characterSprite = Sprite("objects/Yatch_ps.obj",
                               "textures/Yatch_DIF.png");
+Sprite buoySprite = Sprite("objects/buoy_ps.obj",
+                              "textures/buoy.png");
 
 int gWidth = 800, gHeight = 450;
 glm::mat4 projectionMatrix;
@@ -140,6 +142,7 @@ void initShaders(){
     initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl",skyBoxSprite,projectionMatrix);
     initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl",groundSprite,projectionMatrix);
     characterSprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
+    buoySprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
 }
 
 void init(){
@@ -149,6 +152,7 @@ void init(){
     skyBoxSprite.initSkyBoxBuffer();
     initGroundBuffer();
     characterSprite.initBuffer();
+    buoySprite.initBuffer();
 }
 
 void display(){
@@ -156,6 +160,7 @@ void display(){
     renderSkyBox();
     renderGround();
     characterSprite.render(3.0f, movementOffset, projectionMatrix, viewingMatrix);
+    buoySprite.render(0.05f, movementOffset + glm::vec3(10.0f,-0.9f,10.0f), projectionMatrix, viewingMatrix);
 }
 
 void movementKeys(GLFWwindow* window){
