@@ -113,7 +113,7 @@ struct Sprite{
         string cubeMapDirs[6];
         GLuint gProgram, VAO, VBO, EBO, textureID;
         GLuint vertexDataSize, normalDataSize, indexDataSize, texCoordDataSize;
-        GLuint vertexEntries, faceEntries;
+        GLuint vertexEntries, texCoordEntries, faceEntries;
         fastObjMesh* model;
     
     GLfloat* vertexData;
@@ -170,11 +170,22 @@ struct Sprite{
     void addFaceElements(int index){
         if(writeVertexNormal(normalData, model->indices[index].p,model->indices[index].n) ||
            writeVertexTexCoord(texCoordData, model->indices[index].p,model->indices[index].t)){
-            ;
+            vertexData[vertexEntries] = vertexData[3 * model->indices[index].p];
+            vertexData[vertexEntries + 1] = vertexData[3 * model->indices[index].p + 1];
+            vertexData[vertexEntries + 2] = vertexData[3 * model->indices[index].p + 2];
+            normalData[vertexEntries] = model->normals[3 * model->indices[index].n];
+            normalData[vertexEntries + 1] = model->normals[3 * model->indices[index].n + 1];
+            normalData[vertexEntries + 2] = model->normals[3 * model->indices[index].n + 2];
+            texCoordData[texCoordEntries] = model->texcoords[2 * model->indices[index].t];
+            texCoordData[texCoordEntries + 1] = 1.0f - model->texcoords[2 * model->indices[index].t + 1];
+            indexData[index] = vertexEntries/3;
+            vertexEntries = vertexEntries + 3;
+            texCoordEntries = texCoordEntries + 2;
+            cout << model->indices[index].p << "\n";
         }
-        
-        else {cout << "possible ok situation \n" ;}
-        indexData[index] = model->indices[index].p;
+        else{
+            indexData[index] = model->indices[index].p;
+        }
     }
     
     void initShader(string vertDir, string fragDir){
@@ -219,11 +230,10 @@ struct Sprite{
         stbi_image_free(data);
         
         vertexEntries = model->position_count * 3;
+        texCoordEntries = model->position_count * 2;
         faceEntries = model->face_count * 3;
         
         vertexDataSize = vertexEntries * sizeof(GLfloat);
-        normalDataSize = vertexEntries * sizeof(GLfloat);
-        texCoordDataSize = vertexEntries * sizeof(GLfloat);
         indexDataSize = faceEntries * sizeof(GLuint);
         
         vertexData  = new GLfloat[faceEntries * 3] ();
@@ -237,6 +247,10 @@ struct Sprite{
                 addFaceElements(3 * i + j);
             }
         }
+        
+        vertexDataSize = vertexEntries * sizeof(GLfloat);
+        normalDataSize = vertexEntries * sizeof(GLfloat);
+        texCoordDataSize = texCoordEntries * sizeof(GLfloat);
 
         glGenVertexArrays(1, &VAO);
         glBindVertexArray(VAO);

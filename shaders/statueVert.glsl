@@ -35,14 +35,11 @@ void main(void)
     vec3 H = normalize(L + V);
     vec3 N = normalize(nWorld);
 
-    float NdotL = dot(N, L); // for diffuse component
     float NdotH = dot(N, H); // for specular component
 
-    vec3 diffuseColor = I * kd * max(0, NdotL);
     vec3 specularColor = I * ks * pow(max(0, NdotH), 100);
-    vec3 ambientColor = Iamb * ka;
 
-    color = vec4(diffuseColor + specularColor + ambientColor, 1);
+    color = vec4(specularColor, 1);
     TexCoord = inTexCoord;
 
     gl_Position = projectionMatrix * viewingMatrix * modelingMatrix * vec4(inVertex, 1);
