@@ -377,26 +377,26 @@ struct Sprite{
         glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(vertexDataSize + normalDataSize));
         glDrawElements(GL_TRIANGLES, faceEntries , GL_UNSIGNED_INT, 0);
     }
-};
-
-void initShader(string vsFile, string fsFile, Sprite &sprite, glm::mat4 &projectionMatrix){
-    GLint status, vs, fs;
     
-    sprite.gProgram = glCreateProgram();
-    vs = createVS(vsFile.c_str());
-    fs = createFS(fsFile.c_str());
-    glAttachShader(sprite.gProgram, vs);
-    glAttachShader(sprite.gProgram, fs);
-    glLinkProgram(sprite.gProgram);
-    glGetProgramiv(sprite.gProgram, GL_LINK_STATUS, &status);
-    glUseProgram(sprite.gProgram);
-    glUniformMatrix4fv(glGetUniformLocation(sprite.gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+    void renderCubeMap(glm::mat4 &projectionMatrix, glm::mat4 &viewingMatrix){
+        glDisable(GL_DEPTH_TEST);
+        
+        glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(8.0f ,8.0f ,8.0f));
+        glm::mat4 modelingMatrix = matS;
+        
+        glUseProgram(gProgram);
+        glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually
+        glUniformMatrix4fv(glGetUniformLocation(gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+        glUniformMatrix4fv(glGetUniformLocation(gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
+        glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
+        
+        glBindVertexArray(VAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
-    if (status != GL_TRUE){
-        cout << "Program link failed for program" << sprite.gProgram << endl;
-        exit(-1);
+        glEnable(GL_DEPTH_TEST);    // Switch the depth function back on
     }
-}
-
+};
 
 #endif

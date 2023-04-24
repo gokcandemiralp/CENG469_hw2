@@ -61,7 +61,7 @@ void renderSkyBox(){
 }
 
 void initShaders(){
-    initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl",skyBoxSprite,projectionMatrix);
+    skyBoxSprite.initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl");
     groundSprite.initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl");
     characterSprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
     buoySprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
@@ -71,6 +71,7 @@ void init(){
     glEnable(GL_DEPTH_TEST);
     initWindowShape();
     initShaders();
+    
     skyBoxSprite.initSkyBoxBuffer();
     groundSprite.initBuffer();
     characterSprite.initBuffer();
@@ -79,7 +80,7 @@ void init(){
 
 void display(){
     viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
-    renderSkyBox();
+    skyBoxSprite.renderCubeMap(projectionMatrix, viewingMatrix);
     groundSprite.render(300.0f, movementOffset, projectionMatrix, viewingMatrix);
     characterSprite.render(3.0f, movementOffset, projectionMatrix, viewingMatrix);
     buoySprite.render(0.05f, movementOffset + glm::vec3(10.0f,-0.9f,10.0f), projectionMatrix, viewingMatrix);
