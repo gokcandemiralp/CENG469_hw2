@@ -109,6 +109,7 @@ GLuint createFS(const char* shaderName){
 struct Scene{
     public:
     
+    GLuint UBO;
     GLFWwindow* window;
     int gWidth, gHeight;
     glm::mat4 viewingMatrix, projectionMatrix;
@@ -152,12 +153,23 @@ struct Scene{
         strcat(rendererInfo, " - ");
         strcat(rendererInfo, (const char*)glGetString(GL_VERSION));
         glfwSetWindowTitle(window, rendererInfo);
+        
+        glGenBuffers(1, &UBO);
+        glBindBuffer(GL_UNIFORM_BUFFER, UBO);
+        glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+          
+        glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO, 0, 2 * sizeof(glm::mat4));
     }
     
     void initWindowShape(){
         glViewport(0, 0, gWidth, gHeight);
         float fovyRad = (float)(45.0 / 180.0) * M_PI;
         projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
+        
+        glBindBuffer(GL_UNIFORM_BUFFER, UBO);
+        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projectionMatrix));
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
     }
 };
 
@@ -422,7 +434,6 @@ struct Sprite{
         
         glUseProgram(gProgram);
         glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually
-        glUniformMatrix4fv(glGetUniformLocation(gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(scene->projectionMatrix));
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(scene->viewingMatrix));
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
         glUniform3fv(glGetUniformLocation(gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
@@ -446,7 +457,6 @@ struct Sprite{
         
         glUseProgram(gProgram);
         glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually
-        glUniformMatrix4fv(glGetUniformLocation(gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(scene->projectionMatrix));
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(scene->viewingMatrix));
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
         

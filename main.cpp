@@ -33,30 +33,6 @@ const float sensitivity = 0.1f;
 float yaw = -90.0f;
 float pitch = 0.0f;
 
-void initWindowShape(){
-    glViewport(0, 0, gWidth, gHeight);
-    float fovyRad = (float)(45.0 / 180.0) * M_PI;
-    scene.projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
-}
-
-void initShaders(){
-    skyBoxSprite.initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl");
-    groundSprite.initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl");
-    characterSprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
-    buoySprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
-}
-
-void init(){
-    glEnable(GL_DEPTH_TEST);
-    initWindowShape();
-    initShaders();
-    
-    skyBoxSprite.initSkyBoxBuffer();
-    groundSprite.initBuffer();
-    characterSprite.initBuffer();
-    buoySprite.initBuffer();
-}
-
 void display(){
     scene.viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
     skyBoxSprite.renderCubeMap();
@@ -138,6 +114,21 @@ void mainLoop(GLFWwindow* window){
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
+}
+
+void init(){
+    glEnable(GL_DEPTH_TEST);
+    scene.initWindowShape();
+
+    skyBoxSprite.initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl");
+    groundSprite.initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl");
+    characterSprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
+    buoySprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
+    
+    skyBoxSprite.initSkyBoxBuffer();
+    groundSprite.initBuffer();
+    characterSprite.initBuffer();
+    buoySprite.initBuffer();
 }
 
 int main(int argc, char** argv){

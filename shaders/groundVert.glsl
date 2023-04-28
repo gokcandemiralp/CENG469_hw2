@@ -2,10 +2,14 @@
 
 uniform mat4 modelingMatrix;
 uniform mat4 viewingMatrix;
-uniform mat4 projectionMatrix;
 uniform vec3 eyePos;
 
 layout(location=0) in vec3 aPos;
+layout (std140) uniform Matrices{
+    mat4 projectionMatrix;
+    mat4 view;
+};
+
 out vec2 TexCoord;
 
 void main(void){
