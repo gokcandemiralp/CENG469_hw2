@@ -106,15 +106,73 @@ GLuint createFS(const char* shaderName){
     return fs;
 }
 
+struct Scene{
+    public:
+    
+    GLFWwindow* window;
+    int gWidth, gHeight;
+    glm::mat4 viewingMatrix, projectionMatrix;
+    glm::vec3 movementOffset;
+    
+    Scene(){
+        
+    }
+    
+    Scene(int inputWidth, int inputHeight){
+        gWidth = inputWidth;
+        gHeight = inputHeight;
+        if (!glfwInit()){
+            exit(-1);
+        }
+        
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+        glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+        glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+        //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+        glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+        
+        window = glfwCreateWindow(gWidth, gHeight, "CENG469_HW2", NULL, NULL);
+
+        if (!window){
+            glfwTerminate();
+            exit(-1);
+        }
+        
+        glfwMakeContextCurrent(window);
+        glfwSwapInterval(1);
+
+        // Initialize GLEW to setup the OpenGL Function pointers
+        if (GLEW_OK != glewInit()){
+            std::cout << "Failed to initialize GLEW" << std::endl;
+            exit(-1);
+        }
+
+        char rendererInfo[512] = { 0 };
+        strcpy(rendererInfo, (const char*)glGetString(GL_RENDERER));
+        strcat(rendererInfo, " - ");
+        strcat(rendererInfo, (const char*)glGetString(GL_VERSION));
+        glfwSetWindowTitle(window, rendererInfo);
+    }
+    
+    void initWindowShape(){
+        glViewport(0, 0, gWidth, gHeight);
+        float fovyRad = (float)(45.0 / 180.0) * M_PI;
+        projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
+    }
+};
+
 struct Sprite{
     public:
-        string objDir;
-        string texDir;
-        string cubeMapDirs[6];
-        GLuint gProgram, VAO, VBO, EBO, textureID;
-        GLuint vertexDataSize, normalDataSize, indexDataSize, texCoordDataSize;
-        GLuint vertexEntries, texCoordEntries, faceEntries;
-        fastObjMesh* model;
+    
+    Scene *scene;
+    
+    string objDir;
+    string texDir;
+    string cubeMapDirs[6];
+    GLuint gProgram, VAO, VBO, EBO, textureID;
+    GLuint vertexDataSize, normalDataSize, indexDataSize, texCoordDataSize;
+    GLuint vertexEntries, texCoordEntries, faceEntries;
+    fastObjMesh* model;
     
     GLfloat* vertexData;
     GLfloat* normalData;
@@ -126,11 +184,13 @@ struct Sprite{
         ;
     }
     
-    Sprite(string inputObjDir, string inputTexDir) {
+    Sprite(Scene *inputScene, string inputObjDir, string inputTexDir) {
+        scene = inputScene;
         objDir = inputObjDir;
         texDir = inputTexDir;
     }
-    Sprite(string inputObjDir, string inputCubeTexDirs[6]) {
+    Sprite(Scene *inputScene, string inputObjDir, string inputCubeTexDirs[6]) {
+        scene = inputScene;
         objDir = inputObjDir;
         for(int i = 0 ; i < 6 ; ++i){
             cubeMapDirs[i] = inputCubeTexDirs[i];
@@ -354,16 +414,16 @@ struct Sprite{
         fast_obj_destroy(model);
     }
     
-    void render(float scaleFactor, glm::vec3 movementOffset, glm::mat4 &projectionMatrix, glm::mat4 &viewingMatrix){
+    void render(float scaleFactor, glm::vec3 positionOffset){
         glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
-        glm::mat4 matT = glm::translate(glm::mat4(1.0f), movementOffset);
+        glm::mat4 matT = glm::translate(glm::mat4(1.0f), scene->movementOffset+positionOffset);
         glm::mat4 modelingMatrix = matT * matS;
         glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);
         
         glUseProgram(gProgram);
         glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually
-        glUniformMatrix4fv(glGetUniformLocation(gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
-        glUniformMatrix4fv(glGetUniformLocation(gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
+        glUniformMatrix4fv(glGetUniformLocation(gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(scene->projectionMatrix));
+        glUniformMatrix4fv(glGetUniformLocation(gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(scene->viewingMatrix));
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
         glUniform3fv(glGetUniformLocation(gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
         
@@ -378,7 +438,7 @@ struct Sprite{
         glDrawElements(GL_TRIANGLES, faceEntries , GL_UNSIGNED_INT, 0);
     }
     
-    void renderCubeMap(glm::mat4 &projectionMatrix, glm::mat4 &viewingMatrix){
+    void renderCubeMap(){
         glDisable(GL_DEPTH_TEST);
         
         glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(8.0f ,8.0f ,8.0f));
@@ -386,8 +446,8 @@ struct Sprite{
         
         glUseProgram(gProgram);
         glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually
-        glUniformMatrix4fv(glGetUniformLocation(gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projectionMatrix));
-        glUniformMatrix4fv(glGetUniformLocation(gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
+        glUniformMatrix4fv(glGetUniformLocation(gProgram, "projectionMatrix"), 1, GL_FALSE, glm::value_ptr(scene->projectionMatrix));
+        glUniformMatrix4fv(glGetUniformLocation(gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(scene->viewingMatrix));
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
         
         glBindVertexArray(VAO);

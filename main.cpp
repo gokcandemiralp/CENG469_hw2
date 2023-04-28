@@ -8,23 +8,21 @@ string cubeMapDirs[6] ={
     "textures/front.png",
     "textures/back.png"
 };
+Scene scene;
 
-Sprite skyBoxSprite("objects/cube.obj",cubeMapDirs);;
-Sprite groundSprite = Sprite("objects/ground.obj",
+Sprite skyBoxSprite(&scene,"objects/cube.obj",cubeMapDirs);;
+Sprite groundSprite = Sprite(&scene,"objects/ground.obj",
                              "textures/water.jpeg");
-Sprite characterSprite = Sprite("objects/Yatch_ps.obj",
+Sprite characterSprite = Sprite(&scene,"objects/Yatch_ps.obj",
                               "textures/Yatch_DIF.png");
-Sprite buoySprite = Sprite("objects/buoy_ps.obj",
+Sprite buoySprite = Sprite(&scene, "objects/buoy_ps.obj",
                               "textures/buoy.png");
 
 int gWidth = 800, gHeight = 450;
-glm::mat4 projectionMatrix;
-glm::mat4 viewingMatrix;
 glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);
 glm::vec3 eyeFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 eyeUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 
-glm::vec3 movementOffset(0.0f, -1.0f, 0.0f);
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 float eyeSpeed = 1.0f;
@@ -38,26 +36,7 @@ float pitch = 0.0f;
 void initWindowShape(){
     glViewport(0, 0, gWidth, gHeight);
     float fovyRad = (float)(45.0 / 180.0) * M_PI;
-    projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
-}
-
-void renderSkyBox(){
-    glDisable(GL_DEPTH_TEST);
-    
-    glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(8.0f ,8.0f ,8.0f));
-    glm::mat4 modelingMatrix = matS;
-    
-    glUseProgram(skyBoxSprite.gProgram);
-    glUniform1i(glGetUniformLocation(skyBoxSprite.gProgram, "skybox"), 0);
-    glUniformMatrix4fv(glGetUniformLocation(skyBoxSprite.gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(viewingMatrix));
-    glUniformMatrix4fv(glGetUniformLocation(skyBoxSprite.gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
-    
-    glBindVertexArray(skyBoxSprite.VAO);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, skyBoxSprite.textureID);
-    glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
-
-    glEnable(GL_DEPTH_TEST);    // Switch the depth function back on
+    scene.projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
 }
 
 void initShaders(){
@@ -79,26 +58,26 @@ void init(){
 }
 
 void display(){
-    viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
-    skyBoxSprite.renderCubeMap(projectionMatrix, viewingMatrix);
-    groundSprite.render(300.0f, movementOffset, projectionMatrix, viewingMatrix);
-    characterSprite.render(3.0f, movementOffset, projectionMatrix, viewingMatrix);
-    buoySprite.render(0.05f, movementOffset + glm::vec3(10.0f,-0.9f,10.0f), projectionMatrix, viewingMatrix);
+    scene.viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
+    skyBoxSprite.renderCubeMap();
+    groundSprite.render(300.0f, glm::vec3(0.0f,0.0f,0.0f));
+    characterSprite.render(3.0f, glm::vec3(0.0f,0.0f,0.0f));
+    buoySprite.render(0.05f, glm::vec3(10.0f,-0.9f,10.0f));
 }
 
 void movementKeys(GLFWwindow* window){
     eyeSpeed = 5.0f * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
-        movementOffset -= eyeSpeed * eyeFront;
+        scene.movementOffset -= eyeSpeed * eyeFront;
     }
     else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
-        movementOffset += eyeSpeed * eyeFront;
+        scene.movementOffset += eyeSpeed * eyeFront;
     }
     else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
-        movementOffset += glm::normalize(glm::cross(eyeFront, eyeUp)) * eyeSpeed;
+        scene.movementOffset += glm::normalize(glm::cross(eyeFront, eyeUp)) * eyeSpeed;
     }
     else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
-        movementOffset -= glm::normalize(glm::cross(eyeFront, eyeUp)) * eyeSpeed;
+        scene.movementOffset -= glm::normalize(glm::cross(eyeFront, eyeUp)) * eyeSpeed;
     }
 }
 
@@ -163,48 +142,16 @@ void mainLoop(GLFWwindow* window){
 
 int main(int argc, char** argv){
     
-    GLFWwindow* window;
-    if (!glfwInit()){
-        exit(-1);
-    }
-
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-    
-    window = glfwCreateWindow(gWidth, gHeight, "CENG469_HW2", NULL, NULL);
-
-    if (!window){
-        glfwTerminate();
-        exit(-1);
-    }
-
-    glfwMakeContextCurrent(window);
-    glfwSwapInterval(1);
-
-    // Initialize GLEW to setup the OpenGL Function pointers
-    if (GLEW_OK != glewInit()){
-        std::cout << "Failed to initialize GLEW" << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    char rendererInfo[512] = { 0 };
-    strcpy(rendererInfo, (const char*)glGetString(GL_RENDERER));
-    strcat(rendererInfo, " - ");
-    strcat(rendererInfo, (const char*)glGetString(GL_VERSION));
-    glfwSetWindowTitle(window, rendererInfo);
-
+    scene = Scene(800, 450);
     init();
     
-    glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-    glfwSetKeyCallback(window, keyboard);
-    glfwSetCursorPosCallback(window, mouse);
+    glfwSetInputMode(scene.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetKeyCallback(scene.window, keyboard);
+    glfwSetCursorPosCallback(scene.window, mouse);
     
-    mainLoop(window); // this does not return unless the window is closed
+    mainLoop(scene.window); // this does not return unless the window is closed
 
-    glfwDestroyWindow(window);
+    glfwDestroyWindow(scene.window);
     glfwTerminate();
 
     return 0;
