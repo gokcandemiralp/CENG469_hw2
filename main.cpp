@@ -25,13 +25,15 @@ glm::vec3 eyeUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
-float eyeSpeed = 1.0f;
+float eyeSpeedCoefficientZ = 0.0f;
+float eyeSpeedCoefficientX = 0.0f;
+
 
 float mouseLastX=gWidth/2;
 float mouseLastY=gHeight/2;
 const float sensitivity = 0.1f;
 float yaw = -90.0f;
-float pitch = 0.0f;
+float pitch = -30.0f;
 
 void display(){
     scene.lookAt(eyePos, eyeFront, eyeUp);
@@ -42,19 +44,22 @@ void display(){
 }
 
 void movementKeys(GLFWwindow* window){
-    eyeSpeed = 5.0f * deltaTime;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
-        scene.movementOffset -= eyeSpeed * eyeFront;
+        eyeSpeedCoefficientZ = max(-1.0f,eyeSpeedCoefficientZ - (float)deltaTime);
     }
-    else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
-        scene.movementOffset += eyeSpeed * eyeFront;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
+        eyeSpeedCoefficientZ = min(1.0f,eyeSpeedCoefficientZ + (float)deltaTime);
     }
-    else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
-        scene.movementOffset += glm::normalize(glm::cross(eyeFront, eyeUp)) * eyeSpeed;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
+        eyeSpeedCoefficientX = max(-1.0f,eyeSpeedCoefficientX + (float)deltaTime);
     }
-    else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
-        scene.movementOffset -= glm::normalize(glm::cross(eyeFront, eyeUp)) * eyeSpeed;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
+        eyeSpeedCoefficientX = min(1.0f,eyeSpeedCoefficientX - (float)deltaTime);
     }
+    scene.movementOffset += eyeFront * eyeSpeedCoefficientZ * deltaTime * (10.0f);
+    scene.movementOffset += glm::normalize(glm::cross(eyeFront, eyeUp)) * eyeSpeedCoefficientX * deltaTime * (10.0f);
+    eyeSpeedCoefficientZ /= 1.01;
+    eyeSpeedCoefficientX /= 1.01;
 }
 
 void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
@@ -122,18 +127,19 @@ void init(){
 
     skyBoxSprite.initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl");
     groundSprite.initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl");
-    characterSprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
     buoySprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
+    characterSprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
     
     skyBoxSprite.initSkyBoxBuffer();
     groundSprite.initBuffer();
-    characterSprite.initBuffer();
     buoySprite.initBuffer();
+    characterSprite.initBuffer();
+    characterSprite.isStatic = false;
 }
 
 int main(int argc, char** argv){
     
-    scene = Scene(800, 450);
+    scene = Scene(1200, 675);
     init();
     
     glfwSetInputMode(scene.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);

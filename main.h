@@ -121,6 +121,7 @@ struct Scene{
     Scene(int inputWidth, int inputHeight){
         gWidth = inputWidth;
         gHeight = inputHeight;
+        movementOffset = glm::vec3(0.0f,-5.0f,-12.0f); // initial position
         if (!glfwInit()){
             exit(-1);
         }
@@ -197,6 +198,8 @@ struct Sprite{
     GLfloat* normalData;
     GLfloat* texCoordData;
     GLuint* indexData;
+    
+    bool isStatic;
         
     
     Sprite() {
@@ -204,11 +207,13 @@ struct Sprite{
     }
     
     Sprite(Scene *inputScene, string inputObjDir, string inputTexDir) {
+        isStatic = true;
         scene = inputScene;
         objDir = inputObjDir;
         texDir = inputTexDir;
     }
     Sprite(Scene *inputScene, string inputObjDir, string inputCubeTexDirs[6]) {
+        isStatic = true;
         scene = inputScene;
         objDir = inputObjDir;
         for(int i = 0 ; i < 6 ; ++i){
@@ -434,8 +439,16 @@ struct Sprite{
     }
     
     void render(float scaleFactor, glm::vec3 positionOffset){
+        glm::vec3 movementOffset2D;
+        if(isStatic) {
+            movementOffset2D = glm::vec3(scene->movementOffset.x, -5.0f, scene->movementOffset.z);
+        }
+        else{
+            movementOffset2D = glm::vec3(0.0f, -5.0f, -12.0f);
+        }
+        
         glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
-        glm::mat4 matT = glm::translate(glm::mat4(1.0f), scene->movementOffset+positionOffset);
+        glm::mat4 matT = glm::translate(glm::mat4(1.0f), movementOffset2D+positionOffset);
         glm::mat4 modelingMatrix = matT * matS;
         glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);
         
