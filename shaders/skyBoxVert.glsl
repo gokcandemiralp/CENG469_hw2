@@ -1,12 +1,11 @@
 #version 330 core
 
 uniform mat4 modelingMatrix;
-uniform mat4 viewingMatrix;
 
 layout (location = 0) in vec3 aPos;
 layout (std140) uniform Matrices{
     mat4 projectionMatrix;
-    mat4 view;
+    mat4 viewingMatrix;
 };
 
 out vec3 TexCoord;

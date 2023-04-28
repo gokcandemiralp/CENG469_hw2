@@ -11,12 +11,11 @@ vec3 ks = vec3(1, 1, 0.95);   // specular reflectance coefficient
 vec3 lightPos = vec3(-4, 4, 4);   // light position in world coordinates
 
 uniform mat4 modelingMatrix;
-uniform mat4 viewingMatrix;
 uniform vec3 eyePos;
 
 layout (std140) uniform Matrices{
     mat4 projectionMatrix;
-    mat4 view;
+    mat4 viewingMatrix;
 };
 
 layout(location=0) in vec3 inVertex;

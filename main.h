@@ -112,7 +112,6 @@ struct Scene{
     GLuint UBO;
     GLFWwindow* window;
     int gWidth, gHeight;
-    glm::mat4 viewingMatrix, projectionMatrix;
     glm::vec3 movementOffset;
     
     Scene(){
@@ -165,10 +164,18 @@ struct Scene{
     void initWindowShape(){
         glViewport(0, 0, gWidth, gHeight);
         float fovyRad = (float)(45.0 / 180.0) * M_PI;
-        projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
+        glm::mat4 projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
         
         glBindBuffer(GL_UNIFORM_BUFFER, UBO);
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projectionMatrix));
+        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    }
+    
+    void lookAt(glm::vec3 eyePos, glm::vec3 eyeFront,glm::vec3 eyeUp){
+        glm::mat4 viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
+        
+        glBindBuffer(GL_UNIFORM_BUFFER, UBO);
+        glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(viewingMatrix));
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
     }
 };
@@ -434,7 +441,6 @@ struct Sprite{
         
         glUseProgram(gProgram);
         glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually
-        glUniformMatrix4fv(glGetUniformLocation(gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(scene->viewingMatrix));
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
         glUniform3fv(glGetUniformLocation(gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
         
@@ -457,7 +463,6 @@ struct Sprite{
         
         glUseProgram(gProgram);
         glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually
-        glUniformMatrix4fv(glGetUniformLocation(gProgram, "viewingMatrix"), 1, GL_FALSE, glm::value_ptr(scene->viewingMatrix));
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
         
         glBindVertexArray(VAO);

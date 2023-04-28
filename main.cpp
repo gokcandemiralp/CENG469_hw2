@@ -34,7 +34,7 @@ float yaw = -90.0f;
 float pitch = 0.0f;
 
 void display(){
-    scene.viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
+    scene.lookAt(eyePos, eyeFront, eyeUp);
     skyBoxSprite.renderCubeMap();
     groundSprite.render(300.0f, glm::vec3(0.0f,0.0f,0.0f));
     characterSprite.render(3.0f, glm::vec3(0.0f,0.0f,0.0f));
