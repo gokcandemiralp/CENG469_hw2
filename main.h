@@ -196,7 +196,7 @@ struct Sprite{
     string objDir;
     string texDir;
     string cubeMapDirs[6];
-    GLuint gProgram, VAO, VBO, EBO, textureID;
+    GLuint gProgram, VAO, VBO, EBO, textureID, reflectionTextureID;
     GLuint vertexDataSize, normalDataSize, indexDataSize, texCoordDataSize;
     GLuint vertexEntries, texCoordEntries, faceEntries;
     fastObjMesh* model;
@@ -320,6 +320,49 @@ struct Sprite{
         }
         
         stbi_image_free(data);
+
+        
+        glGenTextures(1, &reflectionTextureID);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, reflectionTextureID);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        // These are very important to prevent seams
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+        
+        string cubeMapDirs2[6] ={
+            "textures/right.png",
+            "textures/left.png",
+            "textures/top.png",
+            "textures/bottom.png",
+            "textures/front.png",
+            "textures/back.png"
+        };
+        
+        for (unsigned int i = 0; i < 6; i++){
+            int width, height, nrChannels;
+            unsigned char* data = stbi_load(cubeMapDirs2[i].c_str(), &width, &height, &nrChannels, 0);
+            if (data){
+                stbi_set_flip_vertically_on_load(false);
+                glTexImage2D(
+                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                    0,
+                    GL_RGB,
+                    width,
+                    height,
+                    0,
+                    GL_RGB,
+                    GL_UNSIGNED_BYTE,
+                    data
+                );
+                stbi_image_free(data);
+            }
+            else{
+                std::cout << "Failed to load texture: " << cubeMapDirs[i] << std::endl;
+                stbi_image_free(data);
+            }
+        }
         
         vertexEntries = model->position_count * 3;
         texCoordEntries = model->position_count * 2;
@@ -414,7 +457,7 @@ struct Sprite{
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
         // This might help with seams on some systems
         //glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-
+        
         // Cycles through all the textures and attaches them to the cubemap object
         for (unsigned int i = 0; i < 6; i++){
             int width, height, nrChannels;
@@ -467,6 +510,7 @@ struct Sprite{
         
         glUseProgram(gProgram);
         glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually
+        glUniform1i(glGetUniformLocation(gProgram, "skybox"), 0); // set it manually
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
         glUniform3fv(glGetUniformLocation(gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
         
@@ -474,6 +518,7 @@ struct Sprite{
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
         glBindTexture(GL_TEXTURE_2D, textureID);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, reflectionTextureID);
         
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, 0);
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, BUFFER_OFFSET(vertexDataSize));

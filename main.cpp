@@ -15,7 +15,7 @@ Sprite groundSprite = Sprite(&scene,"objects/ground.obj",
                              "textures/water.jpeg");
 Sprite characterSprite = Sprite(&scene,"objects/Yatch_ps.obj",
                               "textures/Yatch_DIF.png");
-Sprite buoySprite = Sprite(&scene, "objects/buoy_ps.obj",
+Sprite buoySprite = Sprite(&scene, "objects/Yatch_ps.obj",
                               "textures/buoy.png");
 
 int gWidth = 800, gHeight = 450;
@@ -36,9 +36,9 @@ float pitch = -30.0f;
 void display(){
     scene.lookAt(eyePos, eyeFront, eyeUp);
     skyBoxSprite.renderCubeMap();
-    groundSprite.render(300.0f, glm::vec3(0.0f,0.0f,0.0f));
+    // groundSprite.render(300.0f, glm::vec3(0.0f,0.0f,0.0f));
     characterSprite.render(3.0f, glm::vec3(0.0f,0.0f,0.0f));
-    buoySprite.render(0.05f, glm::vec3(10.0f,-0.9f,10.0f));
+    buoySprite.render(4.0f, glm::vec3(10.0f,-0.9f,10.0f));
 }
 
 void movementKeys(GLFWwindow* window){
