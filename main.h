@@ -453,12 +453,13 @@ struct Sprite{
             matR = glm::rotate(glm::mat4(1.0f), glm::radians(scene->vehicleAngle), glm::vec3(0.0f,1.0f,0.0f));
             matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
             matT = glm::translate(glm::mat4(1.0f), movementOffset2D+positionOffset);
-            modelingMatrix = matR * matT * matS;
+            glm::mat4 matT2 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -12.0f));
+            modelingMatrix = matT2 * matR * matT * matS;
         }
         else{
             movementOffset2D = glm::vec3(0.0f, 0.0f, 0.0f);
             matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
-            matT = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, 0.0f));
+            matT = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, -12.0f));
             modelingMatrix = matT * matS;
         }
         glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);
@@ -484,7 +485,8 @@ struct Sprite{
         glDisable(GL_DEPTH_TEST);
         
         glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(8.0f ,8.0f ,8.0f));
-        glm::mat4 modelingMatrix = matS;
+        glm::mat4 matR = glm::rotate(glm::mat4(1.0f), glm::radians(scene->vehicleAngle), glm::vec3(0.0f,1.0f,0.0f));
+        glm::mat4 modelingMatrix = matR * matS;
         
         glUseProgram(gProgram);
         glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually

@@ -42,6 +42,7 @@ void display(){
 }
 
 void movementKeys(GLFWwindow* window){
+    int sign = 1;
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
         scene.eyeSpeedCoefficientZ = max(-1.0f,scene.eyeSpeedCoefficientZ - (float)deltaTime);
     }
@@ -54,9 +55,9 @@ void movementKeys(GLFWwindow* window){
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
         scene.eyeSpeedCoefficientR = scene.eyeSpeedCoefficientR + (float)deltaTime;
     }
+    (scene.eyeSpeedCoefficientZ > 0) ? sign = -1 : sign = 1;
     scene.movementOffset += glm::vec3(glm::sin(glm::radians(scene.vehicleAngle)),0.0f,-glm::cos(glm::radians(scene.vehicleAngle))) * scene.eyeSpeedCoefficientZ * (0.1f);
-    cout << "[" << glm::sin(glm::radians(scene.vehicleAngle)) << "," << -glm::cos(glm::radians(scene.vehicleAngle)) << "]\n";
-    scene.vehicleAngle += scene.eyeSpeedCoefficientR * (0.5f);
+    scene.vehicleAngle += scene.eyeSpeedCoefficientR * sign * (0.5f);
     scene.eyeSpeedCoefficientZ /= 1.01;
     scene.eyeSpeedCoefficientR /= 1.01;
 }
