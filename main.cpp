@@ -25,8 +25,6 @@ glm::vec3 eyeUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
-float eyeSpeedCoefficientZ = 0.0f;
-float eyeSpeedCoefficientX = 0.0f;
 
 
 float mouseLastX=gWidth/2;
@@ -45,21 +43,22 @@ void display(){
 
 void movementKeys(GLFWwindow* window){
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
-        eyeSpeedCoefficientZ = max(-1.0f,eyeSpeedCoefficientZ - (float)deltaTime);
+        scene.eyeSpeedCoefficientZ = max(-1.0f,scene.eyeSpeedCoefficientZ - (float)deltaTime);
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
-        eyeSpeedCoefficientZ = min(1.0f,eyeSpeedCoefficientZ + (float)deltaTime);
+        scene.eyeSpeedCoefficientZ = min(1.0f,scene.eyeSpeedCoefficientZ + (float)deltaTime);
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
-        eyeSpeedCoefficientX = max(-1.0f,eyeSpeedCoefficientX + (float)deltaTime);
+        scene.eyeSpeedCoefficientR = scene.eyeSpeedCoefficientR - (float)deltaTime;
     }
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
-        eyeSpeedCoefficientX = min(1.0f,eyeSpeedCoefficientX - (float)deltaTime);
+        scene.eyeSpeedCoefficientR = scene.eyeSpeedCoefficientR + (float)deltaTime;
     }
-    scene.movementOffset += eyeFront * eyeSpeedCoefficientZ * deltaTime * (10.0f);
-    scene.movementOffset += glm::normalize(glm::cross(eyeFront, eyeUp)) * eyeSpeedCoefficientX * deltaTime * (10.0f);
-    eyeSpeedCoefficientZ /= 1.01;
-    eyeSpeedCoefficientX /= 1.01;
+    scene.movementOffset += glm::vec3(glm::sin(glm::radians(scene.vehicleAngle)),0.0f,-glm::cos(glm::radians(scene.vehicleAngle))) * scene.eyeSpeedCoefficientZ * (0.1f);
+    cout << "[" << glm::sin(glm::radians(scene.vehicleAngle)) << "," << -glm::cos(glm::radians(scene.vehicleAngle)) << "]\n";
+    scene.vehicleAngle += scene.eyeSpeedCoefficientR * (0.5f);
+    scene.eyeSpeedCoefficientZ /= 1.01;
+    scene.eyeSpeedCoefficientR /= 1.01;
 }
 
 void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
@@ -139,7 +138,7 @@ void init(){
 
 int main(int argc, char** argv){
     
-    scene = Scene(1200, 675);
+    scene = Scene(800, 450);
     init();
     
     glfwSetInputMode(scene.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);

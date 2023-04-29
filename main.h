@@ -113,6 +113,9 @@ struct Scene{
     GLFWwindow* window;
     int gWidth, gHeight;
     glm::vec3 movementOffset;
+    float eyeSpeedCoefficientZ;
+    float eyeSpeedCoefficientR;
+    float vehicleAngle;
     
     Scene(){
         
@@ -121,7 +124,11 @@ struct Scene{
     Scene(int inputWidth, int inputHeight){
         gWidth = inputWidth;
         gHeight = inputHeight;
+        eyeSpeedCoefficientZ = 0.0f;
+        eyeSpeedCoefficientR = 0.0f;
         movementOffset = glm::vec3(0.0f,-5.0f,-12.0f); // initial position
+        vehicleAngle = 0.0f;
+        
         if (!glfwInit()){
             exit(-1);
         }
@@ -440,17 +447,22 @@ struct Sprite{
     
     void render(float scaleFactor, glm::vec3 positionOffset){
         glm::vec3 movementOffset2D;
+        glm::mat4 matS,matT,matR,modelingMatrix;
         if(isStatic) {
             movementOffset2D = glm::vec3(scene->movementOffset.x, -5.0f, scene->movementOffset.z);
+            matR = glm::rotate(glm::mat4(1.0f), glm::radians(scene->vehicleAngle), glm::vec3(0.0f,1.0f,0.0f));
+            matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
+            matT = glm::translate(glm::mat4(1.0f), movementOffset2D+positionOffset);
+            modelingMatrix = matR * matT * matS;
         }
         else{
-            movementOffset2D = glm::vec3(0.0f, -5.0f, -12.0f);
+            movementOffset2D = glm::vec3(0.0f, 0.0f, 0.0f);
+            matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
+            matT = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, 0.0f));
+            modelingMatrix = matT * matS;
         }
-        
-        glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
-        glm::mat4 matT = glm::translate(glm::mat4(1.0f), movementOffset2D+positionOffset);
-        glm::mat4 modelingMatrix = matT * matS;
         glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);
+
         
         glUseProgram(gProgram);
         glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually
