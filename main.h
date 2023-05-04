@@ -109,8 +109,11 @@ GLuint createFS(const char* shaderName){
 struct Scene{
     public:
     
-    float mouseLastX;
-    float mouseLastY;
+    float mouseLastX,mouseLastY;
+    float deltaTime,lastFrame;
+    float sensitivity;
+    float yaw,pitch;
+    bool staticMouse;
     
     GLuint UBO;
     GLFWwindow* window;
@@ -128,13 +131,17 @@ struct Scene{
     }
     
     Scene(int inputWidth, int inputHeight){
-        gWidth = 800;
-        gHeight = 450;
-        mouseLastX=gWidth/2;
-        mouseLastY=gHeight/2;
-        
         gWidth = inputWidth;
         gHeight = inputHeight;
+        mouseLastX=gWidth/2;
+        mouseLastY=gHeight/2;
+        deltaTime = 0.0f;
+        lastFrame = 0.0f;
+        sensitivity = 0.1;
+        yaw = -90.0f;
+        pitch = -5.0f;
+        staticMouse = true;
+        
         eyeSpeedCoefficientZ = 0.0f;
         eyeSpeedCoefficientR = 0.0f;
         movementOffset = glm::vec3(0.0f,0.0f,0.0f); // initial position
@@ -181,6 +188,41 @@ struct Scene{
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
           
         glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO, 0, 2 * sizeof(glm::mat4));
+    }
+    
+    glm::vec3 calculateDirection(){
+        glm::vec3 direction;
+        direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+        direction.y = sin(glm::radians(pitch));
+        direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+        return direction;
+    }
+    
+    void calculateFrameTime(){
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
+    }
+    
+    void movementKeys(GLFWwindow* window){
+        int sign = 1;
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
+            eyeSpeedCoefficientZ = max(-1.0f,eyeSpeedCoefficientZ - (float)deltaTime);
+        }
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
+            eyeSpeedCoefficientZ = min(1.0f,eyeSpeedCoefficientZ + (float)deltaTime);
+        }
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
+            eyeSpeedCoefficientR = eyeSpeedCoefficientR - (float)deltaTime;
+        }
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
+            eyeSpeedCoefficientR = eyeSpeedCoefficientR + (float)deltaTime;
+        }
+        (eyeSpeedCoefficientZ > 0) ? sign = -1 : sign = 1;
+        movementOffset += glm::vec3(glm::sin(glm::radians(vehicleAngle)),0.0f,-glm::cos(glm::radians(vehicleAngle))) * eyeSpeedCoefficientZ * (0.1f);
+        vehicleAngle += eyeSpeedCoefficientR * sign * (0.5f);
+        eyeSpeedCoefficientZ /= 1.01;
+        eyeSpeedCoefficientR /= 1.01;
     }
     
     void initWindowShape(){

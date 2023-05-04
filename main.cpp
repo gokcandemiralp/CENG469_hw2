@@ -18,64 +18,16 @@ Sprite vehicleSprite = Sprite(&scene,"objects/Yatch_ps.obj",
 Sprite buoySprite = Sprite(&scene, "objects/buoy_ps.obj",
                               "textures/buoy.png");
 
-float deltaTime = 0.0f;
-float lastFrame = 0.0f;
-
-const float sensitivity = 0.1f;
-float yaw = -90.0f;
-float pitch = -5.0f;
-bool staticMouse = true;
-
-void display(){
-    scene.lookAt();
-    
-    glm::vec3 direction;
-    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    direction.y = sin(glm::radians(pitch));
-    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    scene.eyeFront = glm::normalize(direction);
-    
-    skyBoxSprite.renderCubeMap();
-    groundSprite.render(600.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
-    vehicleSprite.render(3.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
-    buoySprite.render(0.05f, scene.vehicleAngle, glm::vec3(10.0f,-0.9f,10.0f));
-}
-
-void movementKeys(GLFWwindow* window){
-    int sign = 1;
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS){
-        scene.eyeSpeedCoefficientZ = max(-1.0f,scene.eyeSpeedCoefficientZ - (float)deltaTime);
-    }
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS){
-        scene.eyeSpeedCoefficientZ = min(1.0f,scene.eyeSpeedCoefficientZ + (float)deltaTime);
-    }
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS){
-        scene.eyeSpeedCoefficientR = scene.eyeSpeedCoefficientR - (float)deltaTime;
-    }
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS){
-        scene.eyeSpeedCoefficientR = scene.eyeSpeedCoefficientR + (float)deltaTime;
-    }
-    (scene.eyeSpeedCoefficientZ > 0) ? sign = -1 : sign = 1;
-    scene.movementOffset += glm::vec3(glm::sin(glm::radians(scene.vehicleAngle)),0.0f,-glm::cos(glm::radians(scene.vehicleAngle))) * scene.eyeSpeedCoefficientZ * (0.1f);
-    scene.vehicleAngle += scene.eyeSpeedCoefficientR * sign * (0.5f);
-    scene.eyeSpeedCoefficientZ /= 1.01;
-    scene.eyeSpeedCoefficientR /= 1.01;
-}
-
 void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
     else if(key == GLFW_KEY_K && action == GLFW_PRESS){
-        staticMouse = !staticMouse;
-        if(staticMouse){
-            yaw = -90.0f;
-            pitch = -5.0f;
-            glm::vec3 direction;
-            direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-            direction.y = sin(glm::radians(pitch));
-            direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-            scene.eyeFront = glm::normalize(direction);
+        scene.staticMouse = !scene.staticMouse;
+        if(scene.staticMouse){
+            scene.yaw = -90.0f;
+            scene.pitch = -5.0f;
+            scene.eyeFront = glm::normalize(scene.calculateDirection());
         }
     }
     else if(key == GLFW_KEY_L && action == GLFW_PRESS){
@@ -87,7 +39,7 @@ void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
 }
 
 void mouse(GLFWwindow* window, double xpos, double ypos){
-    if(staticMouse){
+    if(scene.staticMouse){
         return;
     }
     
@@ -96,27 +48,15 @@ void mouse(GLFWwindow* window, double xpos, double ypos){
     scene.mouseLastX = xpos;
     scene.mouseLastY = ypos;
 
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-    yaw   += xoffset;
-    pitch += yoffset;
+    xoffset *= scene.sensitivity;
+    yoffset *= scene.sensitivity;
+    scene.yaw   += xoffset;
+    scene.pitch += yoffset;
     
-    if(pitch > 89.0f)
-        pitch = 89.0f;
-    if(pitch < -89.0f)
-        pitch = -89.0f;
-
-    glm::vec3 direction;
-    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
-    direction.y = sin(glm::radians(pitch));
-    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    scene.eyeFront = glm::normalize(direction);
-}
-
-void calculateFrameTime(){
-    float currentFrame = glfwGetTime();
-    deltaTime = currentFrame - lastFrame;
-    lastFrame = currentFrame;
+    if(scene.pitch > 89.0f)
+        scene.pitch = 89.0f;
+    if(scene.pitch < -89.0f)
+        scene.pitch = -89.0f;
 }
 
 void cleanBuffers(){
@@ -124,17 +64,6 @@ void cleanBuffers(){
     glClearDepth(1.0f);
     glClearStencil(0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-}
-
-void mainLoop(GLFWwindow* window){
-    while (!glfwWindowShouldClose(window)){
-        movementKeys(window);
-        calculateFrameTime();
-        cleanBuffers();
-        display();
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
 }
 
 void init(){
@@ -152,6 +81,29 @@ void init(){
     buoySprite.initBuffer();
     vehicleSprite.initBuffer();
     
+}
+
+void display(){
+    scene.lookAt();
+    
+    scene.eyeFront = glm::normalize(scene.calculateDirection());
+    
+    skyBoxSprite.renderCubeMap();
+    groundSprite.render(600.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
+    vehicleSprite.render(3.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
+    buoySprite.render(0.05f, scene.vehicleAngle, glm::vec3(10.0f,-0.9f,10.0f));
+}
+
+
+void mainLoop(GLFWwindow* window){
+    while (!glfwWindowShouldClose(window)){
+        scene.movementKeys(window);
+        scene.calculateFrameTime();
+        cleanBuffers();
+        display();
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
 }
 
 int main(int argc, char** argv){
