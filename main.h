@@ -184,7 +184,7 @@ struct Scene{
         
         glGenBuffers(1, &UBO);
         glBindBuffer(GL_UNIFORM_BUFFER, UBO);
-        glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4), NULL, GL_STATIC_DRAW);
+        glBufferData(GL_UNIFORM_BUFFER, 2 * sizeof(glm::mat4) + sizeof(glm::vec3), NULL, GL_STATIC_DRAW);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
           
         glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO, 0, 2 * sizeof(glm::mat4));
@@ -240,6 +240,7 @@ struct Scene{
         
         glBindBuffer(GL_UNIFORM_BUFFER, UBO);
         glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(viewingMatrix));
+        glBufferSubData(GL_UNIFORM_BUFFER, 2*sizeof(glm::mat4), sizeof(glm::vec3), glm::value_ptr(eyePos));
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
     }
 };
@@ -553,7 +554,7 @@ struct Sprite{
         glUseProgram(gProgram);
         
         if(isVehicle) {
-            matR = glm::rotate(glm::mat4(1.0f), -glm::radians(rotationAngle + 180), glm::vec3(0.0f,1.0f,0.0f));
+            matR = glm::rotate(glm::mat4(1.0f), -glm::radians(rotationAngle), glm::vec3(0.0f,1.0f,0.0f));
             matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
             modelingMatrix = matS;
             
@@ -568,9 +569,7 @@ struct Sprite{
         }
         
         glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0);
-
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
-        glUniform3fv(glGetUniformLocation(gProgram, "eyePos"), 1, glm::value_ptr(scene->eyePos));
         
         glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
