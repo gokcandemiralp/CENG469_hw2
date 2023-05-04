@@ -109,6 +109,9 @@ GLuint createFS(const char* shaderName){
 struct Scene{
     public:
     
+    float mouseLastX;
+    float mouseLastY;
+    
     GLuint UBO;
     GLFWwindow* window;
     int gWidth, gHeight;
@@ -116,18 +119,29 @@ struct Scene{
     float eyeSpeedCoefficientZ;
     float eyeSpeedCoefficientR;
     float vehicleAngle;
+    glm::vec3 eyePos;
+    glm::vec3 eyeFront;
+    glm::vec3 eyeUp;
     
     Scene(){
         
     }
     
     Scene(int inputWidth, int inputHeight){
+        gWidth = 800;
+        gHeight = 450;
+        mouseLastX=gWidth/2;
+        mouseLastY=gHeight/2;
+        
         gWidth = inputWidth;
         gHeight = inputHeight;
         eyeSpeedCoefficientZ = 0.0f;
         eyeSpeedCoefficientR = 0.0f;
-        movementOffset = glm::vec3(0.0f,-5.0f,-12.0f); // initial position
+        movementOffset = glm::vec3(0.0f,0.0f,0.0f); // initial position
         vehicleAngle = 0.0f;
+        eyePos   = glm::vec3(0.0f, 5.0f,  12.0f);
+        eyeFront = glm::vec3(0.0f, 0.0f, -1.0f);
+        eyeUp    = glm::vec3(0.0f, 1.0f,  0.0f);
         
         if (!glfwInit()){
             exit(-1);
@@ -179,7 +193,7 @@ struct Scene{
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
     }
     
-    void lookAt(glm::vec3 eyePos, glm::vec3 eyeFront,glm::vec3 eyeUp){
+    void lookAt(){
         glm::mat4 viewingMatrix = glm::lookAt(eyePos, eyePos + eyeFront, eyeUp);
         
         glBindBuffer(GL_UNIFORM_BUFFER, UBO);
@@ -206,7 +220,7 @@ struct Sprite{
     GLfloat* texCoordData;
     GLuint* indexData;
     
-    bool isStatic;
+    bool isVehicle;
         
     
     Sprite() {
@@ -214,13 +228,13 @@ struct Sprite{
     }
     
     Sprite(Scene *inputScene, string inputObjDir, string inputTexDir) {
-        isStatic = true;
+        isVehicle = false;
         scene = inputScene;
         objDir = inputObjDir;
         texDir = inputTexDir;
     }
     Sprite(Scene *inputScene, string inputObjDir, string inputCubeTexDirs[6]) {
-        isStatic = true;
+        isVehicle = false;
         scene = inputScene;
         objDir = inputObjDir;
         for(int i = 0 ; i < 6 ; ++i){
@@ -297,31 +311,7 @@ struct Sprite{
         }
     }
     
-    void initBuffer(){
-        model = fast_obj_read(objDir.c_str());
-        
-        glGenTextures(1, &textureID);
-        glBindTexture(GL_TEXTURE_2D, textureID);
-        
-        // set the texture wrapping/filtering options (on the currently bound texture object)
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        // load and generate the texture
-        int width, height, nrChannels;
-        unsigned char *data = stbi_load(texDir.c_str(), &width, &height, &nrChannels, 0);
-        if (data){
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-            glGenerateMipmap(GL_TEXTURE_2D);
-        }
-        else{
-            std::cout << "Failed to load texture" << std::endl;
-        }
-        
-        stbi_image_free(data);
-
-        
+    void initReflection(){
         glGenTextures(1, &reflectionTextureID);
         glBindTexture(GL_TEXTURE_CUBE_MAP, reflectionTextureID);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -363,6 +353,33 @@ struct Sprite{
                 stbi_image_free(data);
             }
         }
+    }
+    
+    void initBuffer(){
+        model = fast_obj_read(objDir.c_str());
+        
+        glGenTextures(1, &textureID);
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        
+        // set the texture wrapping/filtering options (on the currently bound texture object)
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        // load and generate the texture
+        int width, height, nrChannels;
+        unsigned char *data = stbi_load(texDir.c_str(), &width, &height, &nrChannels, 0);
+        if (data){
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+            glGenerateMipmap(GL_TEXTURE_2D);
+        }
+        else{
+            std::cout << "Failed to load texture" << std::endl;
+        }
+        
+        stbi_image_free(data);
+
+        if(isVehicle){initReflection();}
         
         vertexEntries = model->position_count * 3;
         texCoordEntries = model->position_count * 2;
@@ -488,31 +505,30 @@ struct Sprite{
         fast_obj_destroy(model);
     }
     
-    void render(float scaleFactor, glm::vec3 positionOffset){
-        glm::vec3 movementOffset2D;
+    
+    void render(float scaleFactor, float rotationAngle, glm::vec3 positionOffset){
         glm::mat4 matS,matT,matR,modelingMatrix;
-        if(isStatic) {
-            movementOffset2D = glm::vec3(scene->movementOffset.x, -5.0f, scene->movementOffset.z);
-            matR = glm::rotate(glm::mat4(1.0f), glm::radians(scene->vehicleAngle), glm::vec3(0.0f,1.0f,0.0f));
+        glUseProgram(gProgram);
+        
+        if(isVehicle) {
+            matR = glm::rotate(glm::mat4(1.0f), -glm::radians(rotationAngle + 180), glm::vec3(0.0f,1.0f,0.0f));
             matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
-            matT = glm::translate(glm::mat4(1.0f), movementOffset2D+positionOffset);
-            glm::mat4 matT2 = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 0.0f, -12.0f));
-            modelingMatrix = matT2 * matR * matT * matS;
+            modelingMatrix = matS;
+            
+            glUniform1i(glGetUniformLocation(gProgram, "skybox"), 0);
+            glUniformMatrix4fv(glGetUniformLocation(gProgram, "refRotation"), 1, GL_FALSE, glm::value_ptr(matR));
         }
         else{
-            movementOffset2D = glm::vec3(0.0f, 0.0f, 0.0f);
+            matR = glm::rotate(glm::mat4(1.0f), glm::radians(rotationAngle), glm::vec3(0.0f,1.0f,0.0f));
             matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
-            matT = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -5.0f, -12.0f));
-            modelingMatrix = matT * matS;
+            matT = glm::translate(glm::mat4(1.0f), positionOffset + scene->movementOffset);
+            modelingMatrix = matR * matT * matS;
         }
-        glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);
-
         
-        glUseProgram(gProgram);
-        glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually
-        glUniform1i(glGetUniformLocation(gProgram, "skybox"), 0); // set it manually
+        glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0);
+
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
-        glUniform3fv(glGetUniformLocation(gProgram, "eyePos"), 1, glm::value_ptr(eyePos));
+        glUniform3fv(glGetUniformLocation(gProgram, "eyePos"), 1, glm::value_ptr(scene->eyePos));
         
         glBindVertexArray(VAO);
         glBindBuffer(GL_ARRAY_BUFFER, VBO);
@@ -529,9 +545,10 @@ struct Sprite{
     void renderCubeMap(){
         glDisable(GL_DEPTH_TEST);
         
-        glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(8.0f ,8.0f ,8.0f));
+        glm::mat4 matS = glm::scale(glm::mat4(1.f), glm::vec3(80.0f ,80.0f ,80.0f));
+        glm::mat4 matT = glm::translate(glm::mat4(1.0f), scene->eyePos);
         glm::mat4 matR = glm::rotate(glm::mat4(1.0f), glm::radians(scene->vehicleAngle), glm::vec3(0.0f,1.0f,0.0f));
-        glm::mat4 modelingMatrix = matR * matS;
+        glm::mat4 modelingMatrix = matT * matR * matS;
         
         glUseProgram(gProgram);
         glUniform1i(glGetUniformLocation(gProgram, "sampler"), 0); // set it manually

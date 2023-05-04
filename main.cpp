@@ -13,32 +13,32 @@ Scene scene;
 Sprite skyBoxSprite(&scene,"objects/cube.obj",cubeMapDirs);;
 Sprite groundSprite = Sprite(&scene,"objects/ground.obj",
                              "textures/water.jpeg");
-Sprite characterSprite = Sprite(&scene,"objects/Yatch_ps.obj",
+Sprite vehicleSprite = Sprite(&scene,"objects/Yatch_ps.obj",
                               "textures/Yatch_DIF.png");
-Sprite buoySprite = Sprite(&scene, "objects/Yatch_ps.obj",
+Sprite buoySprite = Sprite(&scene, "objects/buoy_ps.obj",
                               "textures/buoy.png");
-
-int gWidth = 800, gHeight = 450;
-glm::vec3 eyePos   = glm::vec3(0.0f, 0.0f,  0.0f);
-glm::vec3 eyeFront = glm::vec3(0.0f, 0.0f, -1.0f);
-glm::vec3 eyeUp    = glm::vec3(0.0f, 1.0f,  0.0f);
 
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-
-float mouseLastX=gWidth/2;
-float mouseLastY=gHeight/2;
 const float sensitivity = 0.1f;
 float yaw = -90.0f;
-float pitch = -30.0f;
+float pitch = -5.0f;
+bool staticMouse = true;
 
 void display(){
-    scene.lookAt(eyePos, eyeFront, eyeUp);
+    scene.lookAt();
+    
+    glm::vec3 direction;
+    direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    direction.y = sin(glm::radians(pitch));
+    direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    scene.eyeFront = glm::normalize(direction);
+    
     skyBoxSprite.renderCubeMap();
-    // groundSprite.render(300.0f, glm::vec3(0.0f,0.0f,0.0f));
-    characterSprite.render(3.0f, glm::vec3(0.0f,0.0f,0.0f));
-    buoySprite.render(4.0f, glm::vec3(10.0f,-0.9f,10.0f));
+    groundSprite.render(600.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
+    vehicleSprite.render(3.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
+    buoySprite.render(0.05f, scene.vehicleAngle, glm::vec3(10.0f,-0.9f,10.0f));
 }
 
 void movementKeys(GLFWwindow* window){
@@ -66,6 +66,18 @@ void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
+    else if(key == GLFW_KEY_K && action == GLFW_PRESS){
+        staticMouse = !staticMouse;
+        if(staticMouse){
+            yaw = -90.0f;
+            pitch = -5.0f;
+            glm::vec3 direction;
+            direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+            direction.y = sin(glm::radians(pitch));
+            direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+            scene.eyeFront = glm::normalize(direction);
+        }
+    }
     else if(key == GLFW_KEY_L && action == GLFW_PRESS){
         glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
     }
@@ -75,10 +87,14 @@ void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
 }
 
 void mouse(GLFWwindow* window, double xpos, double ypos){
-    float xoffset = xpos - mouseLastX;
-    float yoffset = mouseLastY - ypos; // reversed since y-coordinates range from bottom to top
-    mouseLastX = xpos;
-    mouseLastY = ypos;
+    if(staticMouse){
+        return;
+    }
+    
+    float xoffset = xpos - scene.mouseLastX;
+    float yoffset = scene.mouseLastY - ypos; // reversed since y-coordinates range from bottom to top
+    scene.mouseLastX = xpos;
+    scene.mouseLastY = ypos;
 
     xoffset *= sensitivity;
     yoffset *= sensitivity;
@@ -94,7 +110,7 @@ void mouse(GLFWwindow* window, double xpos, double ypos){
     direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     direction.y = sin(glm::radians(pitch));
     direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
-    eyeFront = glm::normalize(direction);
+    scene.eyeFront = glm::normalize(direction);
 }
 
 void calculateFrameTime(){
@@ -124,17 +140,18 @@ void mainLoop(GLFWwindow* window){
 void init(){
     glEnable(GL_DEPTH_TEST);
     scene.initWindowShape();
-
+    vehicleSprite.isVehicle = true;
+    
     skyBoxSprite.initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl");
     groundSprite.initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl");
     buoySprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
-    characterSprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
+    vehicleSprite.initShader("shaders/vehicleVert.glsl","shaders/vehicleFrag.glsl");
     
     skyBoxSprite.initSkyBoxBuffer();
     groundSprite.initBuffer();
     buoySprite.initBuffer();
-    characterSprite.initBuffer();
-    characterSprite.isStatic = false;
+    vehicleSprite.initBuffer();
+    
 }
 
 int main(int argc, char** argv){
