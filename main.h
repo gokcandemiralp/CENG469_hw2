@@ -126,6 +126,8 @@ struct Scene{
     glm::vec3 eyeFront;
     glm::vec3 eyeUp;
     
+    int spriteCount;
+    
     Scene(){
         
     }
@@ -133,6 +135,7 @@ struct Scene{
     Scene(int inputWidth, int inputHeight){
         gWidth = inputWidth;
         gHeight = inputHeight;
+        spriteCount = 0;
         mouseLastX=gWidth/2;
         mouseLastY=gHeight/2;
         deltaTime = 0.0f;
@@ -251,6 +254,7 @@ struct Sprite{
     public:
     
     Scene *scene;
+    int spriteId;
     
     string objDir;
     string texDir;
@@ -277,6 +281,9 @@ struct Sprite{
         scene = inputScene;
         objDir = inputObjDir;
         texDir = inputTexDir;
+        spriteId = scene->spriteCount;
+        cout << "Sprite Created - spriteId:" << spriteId << "\n";
+        scene->spriteCount += 1;
     }
     Sprite(Scene *inputScene, string inputObjDir, string inputCubeTexDirs[6]) {
         isVehicle = false;
@@ -285,6 +292,9 @@ struct Sprite{
         for(int i = 0 ; i < 6 ; ++i){
             cubeMapDirs[i] = inputCubeTexDirs[i];
         }
+        spriteId = scene->spriteCount;
+        cout << "Sprite Created - spriteId:" << spriteId << "\n";
+        scene->spriteCount += 1;
     }
 
     bool writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
@@ -598,7 +608,7 @@ struct Sprite{
         glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
         
         glBindVertexArray(VAO);
-        glActiveTexture(GL_TEXTURE0);
+        //glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, textureID);
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
