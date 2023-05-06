@@ -146,7 +146,7 @@ struct Scene{
         eyeSpeedCoefficientR = 0.0f;
         movementOffset = glm::vec3(0.0f,0.0f,0.0f); // initial position
         vehicleAngle = 0.0f;
-        eyePos   = glm::vec3(0.0f, 5.0f,  12.0f);
+        eyePos   = glm::vec3(0.0f, 4.0f,  12.0f);
         eyeFront = glm::vec3(0.0f, 0.0f, -1.0f);
         eyeUp    = glm::vec3(0.0f, 1.0f,  0.0f);
         
@@ -190,8 +190,10 @@ struct Scene{
         glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO, 0, 2 * sizeof(glm::mat4));
     }
     
-    glm::vec3 calculateDirection(){
+    glm::vec3 calculateDirection(float inputYaw, float inputPitch){
         glm::vec3 direction;
+        yaw = inputYaw;
+        pitch = inputPitch;
         direction.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
         direction.y = sin(glm::radians(pitch));
         direction.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));

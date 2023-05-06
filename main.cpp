@@ -25,10 +25,24 @@ void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
     else if(key == GLFW_KEY_K && action == GLFW_PRESS){
         scene.staticMouse = !scene.staticMouse;
         if(scene.staticMouse){
-            scene.yaw = -90.0f;
-            scene.pitch = -5.0f;
-            scene.eyeFront = glm::normalize(scene.calculateDirection());
+            scene.eyeFront = glm::normalize(scene.calculateDirection(-90.0f,-5.0f));
         }
+    }
+    else if(key == GLFW_KEY_Q && action == GLFW_PRESS){
+        scene.eyePos = glm::vec3(-12.0f, 4.0f,  0.0f);
+        scene.eyeFront = glm::normalize(scene.calculateDirection(0.0f,-5.0f));
+    }
+    else if(key == GLFW_KEY_E && action == GLFW_PRESS){
+        scene.eyePos = glm::vec3(12.0f, 4.0f,  0.0f);
+        scene.eyeFront = glm::normalize(scene.calculateDirection(180.0f,-5.0f));
+    }
+    else if(key == GLFW_KEY_R && action == GLFW_PRESS){
+        scene.eyePos = glm::vec3(0.0f, 4.0f,  12.0f);
+        scene.eyeFront = glm::normalize(scene.calculateDirection(-90.0f,-5.0f));
+    }
+    else if(key == GLFW_KEY_T && action == GLFW_PRESS){
+        scene.eyePos = glm::vec3(0.0f, 4.0f,  -12.0f);
+        scene.eyeFront = glm::normalize(scene.calculateDirection(90.0f,-5.0f));
     }
     else if(key == GLFW_KEY_L && action == GLFW_PRESS){
         glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
@@ -86,7 +100,7 @@ void init(){
 void display(){
     scene.lookAt();
     
-    scene.eyeFront = glm::normalize(scene.calculateDirection());
+    scene.eyeFront = glm::normalize(scene.calculateDirection(scene.yaw,scene.pitch));
     
     skyBoxSprite.renderCubeMap();
     groundSprite.render(600.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
