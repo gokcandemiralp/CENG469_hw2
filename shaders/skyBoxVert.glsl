@@ -13,7 +13,7 @@ layout (std140) uniform Matrices{
 out vec3 TexCoord;
 
 void main(void){
-    TexCoord = vec3(aPos.x, aPos.y, -aPos.z);
+    TexCoord = vec3(aPos.x, aPos.y, aPos.z);
     gl_Position = projectionMatrix * viewingMatrix * modelingMatrix * vec4(aPos, 1);
 }
 

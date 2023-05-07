@@ -27,6 +27,7 @@ out vec3 Position;
 out vec4 specular;
 out vec3 Normal;
 out vec2 TexCoord;
+out vec4 refEyePosition;
 
 void main(void)
 {
@@ -44,6 +45,7 @@ void main(void)
 
     specular = vec4(specularColor, 1);
     Normal = mat3(transpose(inverse(refRotation * modelingMatrix))) * inNormal;
+    refEyePosition = refRotation * vec4(eyePos,1);
     TexCoord = inTexCoord;
 
     Position = vec3(refRotation * modelingMatrix * vec4(inVertex, 1.0));

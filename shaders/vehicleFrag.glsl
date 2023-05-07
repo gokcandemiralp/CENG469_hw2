@@ -4,6 +4,7 @@ in vec2 TexCoord;
 in vec3 Normal;
 in vec4 specular;
 in vec3 Position;
+in vec4 refEyePosition;
 
 layout (std140) uniform Matrices{
     mat4 projectionMatrix;
@@ -17,7 +18,7 @@ uniform sampler2D sampler;
 uniform samplerCube skybox;
 
 void main(void){
-    vec3 I = normalize(Position-eyePos);
+    vec3 I = normalize(Position-vec3(refEyePosition));
     vec3 R = reflect(I, normalize(Normal));
     fragColor = vec4(texture(skybox, R));
     // fragColor = texture(sampler, TexCoord) + specular;

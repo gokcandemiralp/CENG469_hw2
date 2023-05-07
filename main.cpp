@@ -13,7 +13,7 @@ Scene scene;
 Sprite skyBoxSprite(&scene,"objects/cube.obj",cubeMapDirs);;
 Sprite groundSprite = Sprite(&scene,"objects/ground.obj",
                              "textures/water.jpeg");
-Sprite vehicleSprite = Sprite(&scene,"objects/Yatch_ps.obj",
+Sprite vehicleSprite = Sprite(&scene,"objects/cybertruck_body.obj",
                               "textures/Yatch_DIF.png");
 Sprite buoySprite = Sprite(&scene, "objects/buoy_ps.obj",
                               "textures/buoy.png");
@@ -103,8 +103,8 @@ void display(){
     scene.eyeFront = glm::normalize(scene.calculateDirection(scene.yaw,scene.pitch));
     
     skyBoxSprite.renderCubeMap();
-    groundSprite.render(600.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
-    vehicleSprite.render(3.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
+    // groundSprite.render(600.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
+    vehicleSprite.render(1.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
     buoySprite.render(0.05f, scene.vehicleAngle, glm::vec3(10.0f,-0.9f,10.0f));
 }
 

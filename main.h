@@ -566,7 +566,7 @@ struct Sprite{
         glUseProgram(gProgram);
         
         if(isVehicle) {
-            matR = glm::rotate(glm::mat4(1.0f), -glm::radians(rotationAngle), glm::vec3(0.0f,1.0f,0.0f));
+            matR = glm::rotate(glm::mat4(1.0f), glm::radians(-rotationAngle), glm::vec3(0.0f,1.0f,0.0f));
             matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
             modelingMatrix = matS;
             
