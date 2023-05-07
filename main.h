@@ -232,8 +232,7 @@ struct Scene{
     
     void initWindowShape(){
         glViewport(0, 0, gWidth, gHeight);
-        float fovyRad = (float)(45.0 / 180.0) * M_PI;
-        glm::mat4 projectionMatrix = glm::perspective(fovyRad, gWidth/(float) gHeight, 1.0f, 100.0f);
+        glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), gWidth/(float) gHeight, 1.0f, 100.0f);
         
         glBindBuffer(GL_UNIFORM_BUFFER, UBO);
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projectionMatrix));
@@ -388,19 +387,17 @@ struct Sprite{
         for (unsigned int i = 0; i < 6; i++){
             int width, height, nrChannels;
             unsigned char* data = stbi_load(cubeMapDirs2[i].c_str(), &width, &height, &nrChannels, 0);
+            
+            glm::mat4 reflectionProjectionMat = glm::perspective(glm::radians(90.0f), 1.0f , 0.0f, 100.0f);
+            glm::mat4 reflectionViewingMat = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
+            
+            // glBindTexture(GL_TEXTURE_2D, gTexColor);
+            // glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA,GL_UNSIGNED_BYTE, 0);
+            // glNamedFramebufferTexture(gFbo, GL_COLOR_ATTACHMENT0, gTexColor, 0);
+            
             if (data){
                 stbi_set_flip_vertically_on_load(false);
-                glTexImage2D(
-                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
-                    0,
-                    GL_RGB,
-                    width,
-                    height,
-                    0,
-                    GL_RGB,
-                    GL_UNSIGNED_BYTE,
-                    data
-                );
+                glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, 2048, 2048, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
                 stbi_image_free(data);
             }
             else{

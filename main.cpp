@@ -1,5 +1,6 @@
 #include "main.h"
 
+bool isWireframe = false;
 string cubeMapDirs[6] ={
     "textures/right.png",
     "textures/left.png",
@@ -13,7 +14,7 @@ Scene scene;
 Sprite skyBoxSprite(&scene,"objects/cube.obj",cubeMapDirs);;
 Sprite groundSprite = Sprite(&scene,"objects/ground.obj",
                              "textures/water.jpeg");
-Sprite vehicleSprite = Sprite(&scene,"objects/cybertruck_body.obj",
+Sprite vehicleSprite = Sprite(&scene,"objects/Yatch_ps.obj",
                               "textures/Yatch_DIF.png");
 Sprite buoySprite = Sprite(&scene, "objects/buoy_ps.obj",
                               "textures/buoy.png");
@@ -22,7 +23,7 @@ void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
         glfwSetWindowShouldClose(window, GLFW_TRUE);
     }
-    else if(key == GLFW_KEY_K && action == GLFW_PRESS){
+    else if(key == GLFW_KEY_F && action == GLFW_PRESS){
         scene.staticMouse = !scene.staticMouse;
         if(scene.staticMouse){
             scene.eyeFront = glm::normalize(scene.calculateDirection(-90.0f,-5.0f));
@@ -45,10 +46,9 @@ void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
         scene.eyeFront = glm::normalize(scene.calculateDirection(90.0f,-5.0f));
     }
     else if(key == GLFW_KEY_L && action == GLFW_PRESS){
-        glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
-    }
-    else if(key == GLFW_KEY_O && action == GLFW_PRESS){
-        glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+        isWireframe = !isWireframe;
+        if(isWireframe){glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );}
+        else{glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );}
     }
 }
 
@@ -103,8 +103,8 @@ void display(){
     scene.eyeFront = glm::normalize(scene.calculateDirection(scene.yaw,scene.pitch));
     
     skyBoxSprite.renderCubeMap();
-    // groundSprite.render(600.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
-    vehicleSprite.render(1.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
+    groundSprite.render(600.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
+    vehicleSprite.render(3.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
     buoySprite.render(0.05f, scene.vehicleAngle, glm::vec3(10.0f,-0.9f,10.0f));
 }
 
