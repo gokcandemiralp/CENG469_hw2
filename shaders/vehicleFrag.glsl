@@ -20,7 +20,7 @@ uniform samplerCube skybox;
 void main(void){
     vec3 I = normalize(Position-vec3(refEyePosition));
     vec3 R = reflect(I, normalize(Normal));
-    // fragColor = vec4(texture(skybox, R)) + specular;
-    fragColor = texture(sampler, TexCoord) + specular;
+    fragColor = vec4(texture(skybox, R));
+    //fragColor = texture(sampler, TexCoord) + specular;
     // fragColor = vec4(normal,1);
 }

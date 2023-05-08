@@ -100,7 +100,11 @@ void init(){
 void display(){
     scene.eyeFront = glm::normalize(scene.calculateDirection(scene.yaw,scene.pitch));
     scene.lookAt();
-    scene.render(true);
+    scene.sprites[3]->reflect();
+    scene.sprites[0]->renderCubeMap();
+    scene.sprites[1]->render();
+    scene.sprites[2]->render();
+    scene.sprites[3]->render();
 }
 
 
