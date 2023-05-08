@@ -9,7 +9,7 @@ string cubeMapDirs[6] ={
     "textures/front.png",
     "textures/back.png"
 };
-Scene scene;
+Scene scene = Scene(800, 450);
 
 Sprite skyBoxSprite(&scene,"objects/cube.obj",cubeMapDirs);;
 Sprite groundSprite = Sprite(&scene,"objects/ground.obj",
@@ -91,21 +91,17 @@ void init(){
     vehicleSprite.initShader("shaders/vehicleVert.glsl","shaders/vehicleFrag.glsl");
     
     skyBoxSprite.initSkyBoxBuffer();
-    groundSprite.initBuffer();
-    buoySprite.initBuffer();
-    vehicleSprite.initBuffer();
+    groundSprite.initBuffer(600.0f, glm::vec3(0.0f,0.0f,0.0f));
+    buoySprite.initBuffer(0.05f, glm::vec3(10.0f,-0.9f,10.0f));
+    vehicleSprite.initBuffer(3.0f, glm::vec3(0.0f,0.0f,0.0f));
     
 }
 
 void display(){
     scene.lookAt();
-    
     scene.eyeFront = glm::normalize(scene.calculateDirection(scene.yaw,scene.pitch));
     
-    skyBoxSprite.renderCubeMap();
-    groundSprite.render(600.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
-    vehicleSprite.render(3.0f, scene.vehicleAngle, glm::vec3(0.0f,0.0f,0.0f));
-    buoySprite.render(0.05f, scene.vehicleAngle, glm::vec3(10.0f,-0.9f,10.0f));
+    scene.render();
 }
 
 
@@ -122,7 +118,6 @@ void mainLoop(GLFWwindow* window){
 
 int main(int argc, char** argv){
     
-    scene = Scene(800, 450);
     init();
     
     glfwSetInputMode(scene.window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
