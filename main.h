@@ -340,12 +340,12 @@ Sprite::Sprite(Scene *inputScene, string inputObjDir, string inputCubeTexDirs[6]
 }
 
 void Sprite::initRefViewingMatrices(){
-    refViewingMatrices[0] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
-    refViewingMatrices[1] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
-    refViewingMatrices[2] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
-    refViewingMatrices[3] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
+    refViewingMatrices[0] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(1.0f,0.0f,0.0f), glm::vec3(0.0f,1.0f,0.0f));
+    refViewingMatrices[1] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(-1.0f,0.0f,0.0f), glm::vec3(0.0f,1.0f,0.0f));
+    refViewingMatrices[2] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,1.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
+    refViewingMatrices[3] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,-1.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
     refViewingMatrices[4] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
-    refViewingMatrices[5] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
+    refViewingMatrices[5] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f), glm::vec3(0.0f,1.0f,0.0f));
 }
 
 bool Sprite::writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
@@ -586,6 +586,7 @@ void Sprite::initReflection(){
     glBindRenderbuffer(GL_RENDERBUFFER, RBO);
     glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 2048, 2048);
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    
     glGenFramebuffers(1, &FBO);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
     for(int i=0; i<6; ++i){
@@ -602,14 +603,17 @@ void Sprite::reflect(){
     
     
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, RBO);
     for(int i = 0 ; i <6 ; ++i){
+        glClearColor(0, 0, 0, 1);
+        glClearDepth(1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
         glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(refViewingMatrices[i]));
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
-        glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, RBO);
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, i, box2CubeMap, 0);
+        // scene->render(false);
+        // glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, RBO);
     }
-    glBindTexture(GL_TEXTURE_CUBE_MAP, box2CubeMap);
+    // glBindTexture(GL_TEXTURE_CUBE_MAP, box2CubeMap);
     
     // Fix Buffers
     glBindFramebuffer(GL_FRAMEBUFFER, 0);

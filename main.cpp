@@ -98,10 +98,9 @@ void init(){
 }
 
 void display(){
-    scene.lookAt();
     scene.eyeFront = glm::normalize(scene.calculateDirection(scene.yaw,scene.pitch));
-    
-    scene.render(false);
+    scene.lookAt();
+    scene.render(true);
 }
 
 
