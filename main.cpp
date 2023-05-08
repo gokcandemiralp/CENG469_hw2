@@ -14,10 +14,10 @@ Scene scene = Scene(800, 450);
 Sprite skyBoxSprite(&scene,"objects/cube.obj",cubeMapDirs);;
 Sprite groundSprite = Sprite(&scene,"objects/ground.obj",
                              "textures/water.jpeg");
-Sprite vehicleSprite = Sprite(&scene,"objects/Yatch_ps.obj",
-                              "textures/Yatch_DIF.png");
 Sprite buoySprite = Sprite(&scene, "objects/buoy_ps.obj",
                               "textures/buoy.png");
+Sprite vehicleSprite = Sprite(&scene,"objects/Yatch_ps.obj",
+                              "textures/Yatch_DIF.png");
 
 void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
