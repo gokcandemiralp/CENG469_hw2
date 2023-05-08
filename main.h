@@ -133,7 +133,7 @@ class Scene{
     
     Scene();
     Scene(int inputWidth, int inputHeight);
-    void render();
+    void render(bool shouldRenderVehicle);
     glm::vec3 calculateDirection(float inputYaw, float inputPitch);
     void calculateFrameTime();
     void movementKeys(GLFWwindow* window);
@@ -164,12 +164,14 @@ class Sprite{
     bool isVehicle;
     float scaleFactor;
     glm::vec3 positionOffset;
+    glm::mat4 refViewingMatrices[6];
         
     
     Sprite();
     Sprite(Scene *inputScene, string inputObjDir, string inputTexDir);
     Sprite(Scene *inputScene, string inputObjDir, string inputCubeTexDirs[6]);
     bool writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex);
+    void initRefViewingMatrices();
     bool writeVertexTexCoord(GLfloat* texCoordData, int vertexIndex, int texCoordIndex);
     void addFaceElements(int index);
     void initShader(string vertDir, string fragDir);
@@ -244,10 +246,12 @@ Scene::Scene(int inputWidth, int inputHeight){
     glBindBufferRange(GL_UNIFORM_BUFFER, 0, UBO, 0, 2 * sizeof(glm::mat4));
 }
 
-void Scene::render(){
+void Scene::render(bool shouldRenderVehicle){
     sprites[0]->renderCubeMap();
     for(int i = 1 ; i<spriteCount; ++i){
-        sprites[i]->render();
+        if(shouldRenderVehicle || !sprites[i]->isVehicle){
+            sprites[i]->render();
+        }
     }
 }
 
@@ -317,6 +321,7 @@ Sprite::Sprite(Scene *inputScene, string inputObjDir, string inputTexDir) {
     texDir = inputTexDir;
     spriteId = scene->spriteCount;
     scene->sprites.push_back(this);
+    initRefViewingMatrices();
     cout << "Sprite Created - spriteId:" << spriteId << "\n";
     scene->spriteCount += 1;
 }
@@ -332,6 +337,15 @@ Sprite::Sprite(Scene *inputScene, string inputObjDir, string inputCubeTexDirs[6]
     scene->sprites.push_back(this);
     cout << "Sprite Created - spriteId:" << spriteId << "\n";
     scene->spriteCount += 1;
+}
+
+void Sprite::initRefViewingMatrices(){
+    refViewingMatrices[0] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
+    refViewingMatrices[1] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
+    refViewingMatrices[2] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
+    refViewingMatrices[3] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
+    refViewingMatrices[4] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
+    refViewingMatrices[5] = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
 }
 
 bool Sprite::writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
@@ -401,32 +415,6 @@ void Sprite::initShader(string vertDir, string fragDir){
         cout << "Program link failed for program" << gProgram << endl;
         exit(-1);
     }
-}
-
-void Sprite::initReflection(){
-    
-    glGenTextures(1, &box2CubeMap);
-    glBindTexture(GL_TEXTURE_CUBE_MAP, box2CubeMap);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-    for(int i=0; i<6; ++i){
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, 2048, 2048, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-    }
-
-    glGenRenderbuffers(1, &RBO);
-    glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 2048, 2048);
-    glBindRenderbuffer(GL_RENDERBUFFER, 0);
-    glGenFramebuffers(1, &FBO);
-    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-    for(int i=0; i<6; ++i){
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, box2CubeMap, 0);
-    }
-    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){exit(0);}
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
 void Sprite::initBuffer(float scaleFactorInput, glm::vec3 positionOffsetInput){
@@ -581,11 +569,56 @@ void Sprite::initSkyBoxBuffer(){
     fast_obj_destroy(model);
 }
 
+void Sprite::initReflection(){
+    
+    glGenTextures(1, &box2CubeMap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, box2CubeMap);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+    for(int i=0; i<6; ++i){
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, 2048, 2048, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+    }
+
+    glGenRenderbuffers(1, &RBO);
+    glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 2048, 2048);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    glGenFramebuffers(1, &FBO);
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    for(int i=0; i<6; ++i){
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, box2CubeMap, 0);
+    }
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){exit(0);}
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+}
 
 void Sprite::reflect(){
     glm::mat4 reflectionProjectionMat = glm::perspective(glm::radians(90.0f), 1.0f , 0.0f, 100.0f);
-    glm::mat4 reflectionViewingMat = glm::lookAt(glm::vec3(0.0f,0.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
+    glBindBuffer(GL_UNIFORM_BUFFER, scene->UBO);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(reflectionProjectionMat));
+    
+    
+    glBindFramebuffer(GL_FRAMEBUFFER, FBO);
+    for(int i = 0 ; i <6 ; ++i){
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(refViewingMatrices[i]));
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, 0, 0);
+        glBindRenderbuffer(GL_RENDERBUFFER, RBO);
+        glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, RBO);
+    }
     glBindTexture(GL_TEXTURE_CUBE_MAP, box2CubeMap);
+    
+    // Fix Buffers
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glBindRenderbuffer(GL_RENDERBUFFER, 0);
+    glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), scene->gWidth/(float) scene->gHeight, 1.0f, 100.0f);
+    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projectionMatrix));
+    glm::mat4 viewingMatrix = glm::lookAt(scene->eyePos, scene->eyePos + scene->eyeFront, scene->eyeUp);
+    glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(viewingMatrix));
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 void Sprite::render(){

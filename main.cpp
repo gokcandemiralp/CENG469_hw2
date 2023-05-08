@@ -101,7 +101,7 @@ void display(){
     scene.lookAt();
     scene.eyeFront = glm::normalize(scene.calculateDirection(scene.yaw,scene.pitch));
     
-    scene.render();
+    scene.render(false);
 }
 
 
