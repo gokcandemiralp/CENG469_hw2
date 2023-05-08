@@ -11,8 +11,6 @@ vec3 ks = vec3(1, 1, 0.95);   // specular reflectance coefficient
 vec3 lightPos = vec3(-4, 4, 4);   // light position in world coordinates
 
 uniform mat4 modelingMatrix;
-uniform mat4 refRotation;
-
 layout (std140) uniform Matrices{
     mat4 projectionMatrix;
     mat4 viewingMatrix;
@@ -44,11 +42,11 @@ void main(void)
     vec3 specularColor = I * ks * pow(max(0, NdotH), 100);
 
     specular = vec4(specularColor, 1);
-    Normal = mat3(transpose(inverse(refRotation * modelingMatrix))) * inNormal;
-    refEyePosition = refRotation * vec4(eyePos,1);
+    Normal = mat3(transpose(inverse(modelingMatrix))) * inNormal;
+    refEyePosition = vec4(eyePos,1);
     TexCoord = inTexCoord;
 
-    Position = vec3(refRotation * modelingMatrix * vec4(inVertex, 1.0));
+    Position = vec3(modelingMatrix * vec4(inVertex, 1.0));
     gl_Position = projectionMatrix * viewingMatrix * modelingMatrix * vec4(inVertex, 1.0);
 }
 

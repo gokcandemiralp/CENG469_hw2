@@ -83,7 +83,9 @@ void cleanBuffers(){
 void init(){
     glEnable(GL_DEPTH_TEST);
     scene.initWindowShape();
+    
     vehicleSprite.isVehicle = true;
+    vehicleSprite.initReflection();
     
     skyBoxSprite.initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl");
     groundSprite.initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl");

@@ -337,12 +337,14 @@ Sprite::Sprite(Scene *inputScene, string inputObjDir, string inputCubeTexDirs[6]
 }
 
 void Sprite::initRefViewingMatrices(){
-    refViewingMatrices[0] = glm::lookAt(glm::vec3(0.0f,0.5f,0.0f), glm::vec3(1.0f,0.0f,0.0f), glm::vec3(0.0f,1.0f,0.0f));
-    refViewingMatrices[1] = glm::lookAt(glm::vec3(0.0f,0.5f,0.0f), glm::vec3(-1.0f,0.0f,0.0f), glm::vec3(0.0f,1.0f,0.0f));
-    refViewingMatrices[2] = glm::lookAt(glm::vec3(0.0f,0.5f,0.0f), glm::vec3(0.0f,1.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
-    refViewingMatrices[3] = glm::lookAt(glm::vec3(0.0f,0.5f,0.0f), glm::vec3(0.0f,-1.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
-    refViewingMatrices[4] = glm::lookAt(glm::vec3(0.0f,0.5f,0.0f), glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,1.0f,0.0f));
-    refViewingMatrices[5] = glm::lookAt(glm::vec3(0.0f,0.5f,0.0f), glm::vec3(0.0f,0.0f,1.0f), glm::vec3(0.0f,1.0f,0.0f));
+    // glm::mat4 deneme = glm::lookAt(<#const vec<3, T, Q> &eye#>, <#const vec<3, T, Q> &center#>, <#const vec<3, T, Q> &up#>)
+    glm::vec3 centerPos = glm::vec3(0.0f,0.2f,0.0f);
+    refViewingMatrices[0] = glm::lookAt(centerPos, centerPos + glm::vec3(1.0f,0.0f,0.0f), glm::vec3(0.0f,-1.0f,0.0f));
+    refViewingMatrices[1] = glm::lookAt(centerPos, centerPos + glm::vec3(-1.0f,0.0f,0.0f), glm::vec3(0.0f,-1.0f,0.0f));
+    refViewingMatrices[2] = glm::lookAt(centerPos, centerPos + glm::vec3(0.0f,1.0f,0.0f), glm::vec3(0.0f,0.0f,1.0f));
+    refViewingMatrices[3] = glm::lookAt(centerPos, centerPos + glm::vec3(0.0f,-1.0f,0.0f), glm::vec3(0.0f,0.0f,-1.0f));
+    refViewingMatrices[4] = glm::lookAt(centerPos, centerPos + glm::vec3(0.0f,0.0f,1.0f), glm::vec3(0.0f,-1.0f,0.0f));
+    refViewingMatrices[5] = glm::lookAt(centerPos, centerPos + glm::vec3(0.0f,0.0f,-1.0f), glm::vec3(0.0f,-1.0f,0.0f));
 }
 
 bool Sprite::writeVertexNormal(GLfloat* normalData, int vertexIndex, int normalIndex){
@@ -439,8 +441,6 @@ void Sprite::initBuffer(float scaleFactorInput, glm::vec3 positionOffsetInput){
     }
     
     stbi_image_free(data);
-
-    if(isVehicle){initReflection();}
     
     vertexEntries = model->position_count * 3;
     texCoordEntries = model->position_count * 2;
@@ -636,15 +636,12 @@ void Sprite::render(){
     glUseProgram(gProgram);
     
     if(isVehicle) {
-        matR = glm::rotate(glm::mat4(1.0f), glm::radians(-scene->vehicleAngle), glm::vec3(0.0f,1.0f,0.0f));
         matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
         modelingMatrix = matS;
         
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, box2CubeMap);
         glUniform1i(glGetUniformLocation(gProgram, "skybox"), 0);
-        glUniformMatrix4fv(glGetUniformLocation(gProgram, "refRotation"), 1, GL_FALSE, glm::value_ptr(matR));
-        
     }
     else{
         matR = glm::rotate(glm::mat4(1.0f), glm::radians(scene->vehicleAngle), glm::vec3(0.0f,1.0f,0.0f));
