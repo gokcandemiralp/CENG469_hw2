@@ -588,17 +588,15 @@ void Sprite::initReflection(){
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
     for(int i=0; i<6; ++i){
-        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, 512, 512, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+        glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, 1024, 1024, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
     }
 
     glGenRenderbuffers(1, &RBO);
     glBindRenderbuffer(GL_RENDERBUFFER, RBO);
-    cout << "RBO:" << RBO << "\n";
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 512, 512);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 1024, 1024);
     
     glGenFramebuffers(1, &FBO);
     glBindFramebuffer(GL_FRAMEBUFFER, FBO);
-    cout << "FBO:" << FBO << "\n";
     for(int i=0; i<6; ++i){
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, box2CubeMap, 0);
     }
@@ -617,7 +615,7 @@ glm::mat4 Sprite::shake(){
 void Sprite::reflect(){
     glm::mat4 reflectionProjectionMat = glm::perspective(glm::radians(90.0f), 1.0f , 0.1f, 100.0f);
     
-    glViewport(0, 0, 512, 512);
+    glViewport(0, 0, 1024, 1024);
     glBindBuffer(GL_UNIFORM_BUFFER, scene->UBO);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(reflectionProjectionMat));
     

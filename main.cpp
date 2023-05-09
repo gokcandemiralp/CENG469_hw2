@@ -27,30 +27,43 @@ void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
     }
     else if(key == GLFW_KEY_F && action == GLFW_PRESS){
         scene.staticMouse = !scene.staticMouse;
+        cout << "KEY_F PRESSED : Free Cam ON \n";
         if(scene.staticMouse){
+            cout << "KEY_F PRESSED : Free Cam OFF \n";
+            scene.eyePos = glm::vec3(0.0f, 4.0f,  12.0f);
             scene.eyeFront = glm::normalize(scene.calculateDirection(-90.0f,-5.0f));
         }
     }
     else if(key == GLFW_KEY_Q && action == GLFW_PRESS){
+        cout << "KEY_Q PRESSED : Left Angle Cam ON \n";
         scene.eyePos = glm::vec3(-12.0f, 4.0f,  0.0f);
         scene.eyeFront = glm::normalize(scene.calculateDirection(0.0f,-5.0f));
     }
     else if(key == GLFW_KEY_E && action == GLFW_PRESS){
+        cout << "KEY_E PRESSED : Right Angle Cam ON \n";
         scene.eyePos = glm::vec3(12.0f, 4.0f,  0.0f);
         scene.eyeFront = glm::normalize(scene.calculateDirection(180.0f,-5.0f));
     }
     else if(key == GLFW_KEY_R && action == GLFW_PRESS){
+        cout << "KEY_R PRESSED : Back Angle Cam ON \n";
         scene.eyePos = glm::vec3(0.0f, 4.0f,  12.0f);
         scene.eyeFront = glm::normalize(scene.calculateDirection(-90.0f,-5.0f));
     }
     else if(key == GLFW_KEY_T && action == GLFW_PRESS){
+        cout << "KEY_T PRESSED : Front Angle Cam ON \n";
         scene.eyePos = glm::vec3(0.0f, 4.0f,  -12.0f);
         scene.eyeFront = glm::normalize(scene.calculateDirection(90.0f,-5.0f));
     }
     else if(key == GLFW_KEY_L && action == GLFW_PRESS){
         isWireframe = !isWireframe;
-        if(isWireframe){glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );}
-        else{glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );}
+        if(isWireframe){
+            glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+            cout << "KEY_L PRESSED : Wireframe Mode is ON \n";
+        }
+        else{
+            glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
+            cout << "KEY_L PRESSED : Wireframe Mode is OFF \n";
+        }
     }
 }
 
@@ -100,7 +113,7 @@ void init(){
     groundSprite.initBuffer(600.0f, glm::vec3(0.0f,0.0f,0.0f));
     buoySprite.initBuffer(0.25f, glm::vec3(20.0f,-4.6f,-20.0f));
     vehicleSprite.initBuffer(3.0f, glm::vec3(0.0f,0.0f,0.0f));
-    lighthouseSprite.initBuffer(0.02f, glm::vec3(10.0f,-0.01f,-100.0f));
+    lighthouseSprite.initBuffer(0.02f, glm::vec3(20.0f,-0.01f,-100.0f));
     
 }
 
@@ -137,6 +150,7 @@ int main(int argc, char** argv){
     glfwSetKeyCallback(scene.window, keyboard);
     glfwSetCursorPosCallback(scene.window, mouse);
     
+    cout << "PRESS ESC TO EXIT \n";
     mainLoop(scene.window); // this does not return unless the window is closed
 
     glfwDestroyWindow(scene.window);
