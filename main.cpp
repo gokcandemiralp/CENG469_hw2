@@ -86,6 +86,7 @@ void init(){
     
     vehicleSprite.isVehicle = true;
     vehicleSprite.initReflection();
+    buoySprite.doesShake = true;
     
     skyBoxSprite.initShader("shaders/skyboxVert.glsl","shaders/skyboxFrag.glsl");
     groundSprite.initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl");
@@ -94,7 +95,7 @@ void init(){
     
     skyBoxSprite.initSkyBoxBuffer();
     groundSprite.initBuffer(600.0f, glm::vec3(0.0f,0.0f,0.0f));
-    buoySprite.initBuffer(0.05f, glm::vec3(10.0f,-0.9f,10.0f));
+    buoySprite.initBuffer(0.25f, glm::vec3(20.0f,-4.6f,-20.0f));
     vehicleSprite.initBuffer(3.0f, glm::vec3(0.0f,0.0f,0.0f));
     
 }
@@ -102,11 +103,13 @@ void init(){
 void display(){
     scene.eyeFront = glm::normalize(scene.calculateDirection(scene.yaw,scene.pitch));
     scene.lookAt();
-    scene.sprites[3]->reflect();
-    scene.sprites[0]->renderCubeMap();
-    scene.sprites[1]->render();
-    scene.sprites[2]->render();
-    scene.sprites[3]->render();
+    
+    vehicleSprite.reflect();
+    skyBoxSprite.renderCubeMap();
+    groundSprite.render();
+    buoySprite.renderVariation(glm::vec3(20.0f,-4.6f,-20.0f));
+    buoySprite.renderVariation(glm::vec3(-30.0f,-4.6f,-25.0f));
+    vehicleSprite.render();
 }
 
 

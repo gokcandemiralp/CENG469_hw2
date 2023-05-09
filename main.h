@@ -165,7 +165,9 @@ class Sprite{
     float scaleFactor;
     glm::vec3 positionOffset;
     glm::mat4 refViewingMatrices[6];
-        
+    
+    bool doesShake;
+    float shakeAngle;
     
     Sprite();
     Sprite(Scene *inputScene, string inputObjDir, string inputTexDir);
@@ -178,8 +180,10 @@ class Sprite{
     void initReflection();
     void initBuffer(float scaleFactorInput, glm::vec3 positionOffsetInput);
     void initSkyBoxBuffer();
+    glm::mat4 shake();
     void reflect();
     void render();
+    void renderVariation(glm::vec3 positionOffsetInput);
     void renderCubeMap();
 };
 
@@ -249,7 +253,8 @@ Scene::Scene(int inputWidth, int inputHeight){
 void Scene::renderWithoutVehicle(){
     sprites[0]->renderCubeMap();
     sprites[1]->render();
-    sprites[2]->render();
+    sprites[2]->renderVariation(glm::vec3(20.0f,-4.6f,-20.0f));
+    sprites[2]->renderVariation(glm::vec3(-30.0f,-4.6f,-25.0f));
 }
 
 glm::vec3 Scene::calculateDirection(float inputYaw, float inputPitch){
@@ -313,6 +318,7 @@ Sprite::Sprite() {
 
 Sprite::Sprite(Scene *inputScene, string inputObjDir, string inputTexDir) {
     isVehicle = false;
+    doesShake = false;
     scene = inputScene;
     objDir = inputObjDir;
     texDir = inputTexDir;
@@ -325,6 +331,7 @@ Sprite::Sprite(Scene *inputScene, string inputObjDir, string inputTexDir) {
 
 Sprite::Sprite(Scene *inputScene, string inputObjDir, string inputCubeTexDirs[6]) {
     isVehicle = false;
+    doesShake = false;
     scene = inputScene;
     objDir = inputObjDir;
     for(int i = 0 ; i < 6 ; ++i){
@@ -601,6 +608,11 @@ void Sprite::initReflection(){
     glBindRenderbuffer(GL_RENDERBUFFER, 0);
 }
 
+glm::mat4 Sprite::shake(){
+    shakeAngle += (scene->deltaTime)/10;
+    return glm::rotate(glm::mat4(1.0f), glm::radians(glm::sin(shakeAngle)*5), glm::vec3(0.6f,0.0f,0.8f));
+}
+
 void Sprite::reflect(){
     glm::mat4 reflectionProjectionMat = glm::perspective(glm::radians(90.0f), 1.0f , 0.1f, 100.0f);
     
@@ -647,7 +659,12 @@ void Sprite::render(){
         matR = glm::rotate(glm::mat4(1.0f), glm::radians(scene->vehicleAngle), glm::vec3(0.0f,1.0f,0.0f));
         matS = glm::scale(glm::mat4(1.f), glm::vec3(scaleFactor ,scaleFactor ,scaleFactor));
         matT = glm::translate(glm::mat4(1.0f), positionOffset + scene->movementOffset);
-        modelingMatrix = matR * matT * matS;
+        if(doesShake){
+            glm::mat4 shakeMatR = shake();
+            modelingMatrix = matR * matT * matS * shakeMatR;
+        }
+        else{modelingMatrix = matR * matT * matS;}
+        
     }
     
     glActiveTexture(GL_TEXTURE1);
@@ -657,6 +674,11 @@ void Sprite::render(){
     glUniformMatrix4fv(glGetUniformLocation(gProgram, "modelingMatrix"), 1, GL_FALSE, glm::value_ptr(modelingMatrix));
     glBindVertexArray(VAO);
     glDrawElements(GL_TRIANGLES, faceEntries , GL_UNSIGNED_INT, 0);
+}
+
+void Sprite::renderVariation(glm::vec3 positionOffsetInput){
+    positionOffset = positionOffsetInput;
+    render();
 }
 
 void Sprite::renderCubeMap(){
