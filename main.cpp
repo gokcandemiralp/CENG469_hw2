@@ -18,6 +18,8 @@ Sprite buoySprite = Sprite(&scene, "objects/buoy_ps.obj",
                               "textures/buoy.png");
 Sprite vehicleSprite = Sprite(&scene,"objects/Yatch_ps.obj",
                               "textures/Yatch_DIF.png");
+Sprite lighthouseSprite = Sprite(&scene, "objects/lighthouse.obj",
+                              "textures/lighthouse.jpg");
 
 void keyboard(GLFWwindow* window, int key, int scancode, int action, int mods){
     if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS){
@@ -92,11 +94,13 @@ void init(){
     groundSprite.initShader("shaders/groundVert.glsl","shaders/groundFrag.glsl");
     buoySprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
     vehicleSprite.initShader("shaders/vehicleVert.glsl","shaders/vehicleFrag.glsl");
+    lighthouseSprite.initShader("shaders/statueVert.glsl","shaders/statueFrag.glsl");
     
     skyBoxSprite.initSkyBoxBuffer();
     groundSprite.initBuffer(600.0f, glm::vec3(0.0f,0.0f,0.0f));
     buoySprite.initBuffer(0.25f, glm::vec3(20.0f,-4.6f,-20.0f));
     vehicleSprite.initBuffer(3.0f, glm::vec3(0.0f,0.0f,0.0f));
+    lighthouseSprite.initBuffer(0.02f, glm::vec3(10.0f,-0.01f,-100.0f));
     
 }
 
@@ -110,6 +114,7 @@ void display(){
     buoySprite.renderVariation(glm::vec3(20.0f,-4.6f,-20.0f));
     buoySprite.renderVariation(glm::vec3(-30.0f,-4.6f,-25.0f));
     vehicleSprite.render();
+    lighthouseSprite.render();
 }
 
 

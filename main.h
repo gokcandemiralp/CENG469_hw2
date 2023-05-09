@@ -255,6 +255,7 @@ void Scene::renderWithoutVehicle(){
     sprites[1]->render();
     sprites[2]->renderVariation(glm::vec3(20.0f,-4.6f,-20.0f));
     sprites[2]->renderVariation(glm::vec3(-30.0f,-4.6f,-25.0f));
+    sprites[4]->render();
 }
 
 glm::vec3 Scene::calculateDirection(float inputYaw, float inputPitch){
@@ -296,7 +297,7 @@ void Scene::movementKeys(GLFWwindow* window){
 
 void Scene::initWindowShape(){
     glViewport(0, 0, gWidth, gHeight);
-    glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), gWidth/(float) gHeight, 1.0f, 100.0f);
+    glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), gWidth/(float) gHeight, 1.0f, 400.0f);
     
     glBindBuffer(GL_UNIFORM_BUFFER, UBO);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projectionMatrix));
@@ -636,7 +637,7 @@ void Sprite::reflect(){
     glfwGetFramebufferSize(scene->window, &width, &height);
     glViewport(0, 0, width, height);
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), scene->gWidth/(float) scene->gHeight, 1.0f, 100.0f);
+    glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.0f), scene->gWidth/(float) scene->gHeight, 1.0f, 400.0f);
     glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(glm::mat4), glm::value_ptr(projectionMatrix));
     glm::mat4 viewingMatrix = glm::lookAt(scene->eyePos, scene->eyePos + scene->eyeFront, scene->eyeUp);
     glBufferSubData(GL_UNIFORM_BUFFER, sizeof(glm::mat4), sizeof(glm::mat4), glm::value_ptr(viewingMatrix));
